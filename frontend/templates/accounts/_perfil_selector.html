@@ -1,0 +1,3 @@
+<fieldset class="profile-choice"><legend>Selecciona tu perfil</legend><div class="profile-options">
+{% for radio in form.perfil %}<label class="profile-option">{{ radio.tag }}<span class="profile-icon" aria-hidden="true">{% if forloop.first %}♧{% else %}▤{% endif %}</span><span><strong>{% if forloop.first %}Soy Cliente{% else %}Soy Emprendedora{% endif %}</strong><small>{% if forloop.first %}Compras y pedidos{% else %}Gestión de taller{% endif %}</small></span></label>{% endfor %}
+</div>{% for error in form.perfil.errors %}<p class="field-error">{{ error }}</p>{% endfor %}</fieldset>

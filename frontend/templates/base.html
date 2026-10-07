@@ -1,0 +1,16 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TejiendoHogar{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/variables.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/accounts.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <nav class="site-nav" aria-label="Navegación principal"><a href="/">TejiendoHogar</a>
+    {% if user.is_authenticated %}<div>{% if user.rol == 'Cliente' %}<a href="{% url 'accounts:cliente' %}">Mi espacio</a>{% elif user.rol == 'Emprendedora' %}<a href="{% url 'accounts:emprendedora' %}">Panel del taller</a>{% endif %}<a href="{% url 'accounts:perfil' %}">Mi perfil</a><form method="post" action="{% url 'accounts:logout' %}" class="inline-form">{% csrf_token %}<button type="submit" class="nav-button">Salir</button></form></div>{% endif %}
+  </nav>
+  {% if messages %}<section class="messages" aria-live="polite">{% for message in messages %}<p class="message {{ message.tags }}">{{ message }}</p>{% endfor %}</section>{% endif %}
+  <main>{% block content %}{% endblock %}</main>
+  {% block scripts %}{% endblock %}
+</body></html>

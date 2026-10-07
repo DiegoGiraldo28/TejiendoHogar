@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% load static %}
+{% block content %}<section class="auth-shell">
+  <header class="brand"><div class="brand-mark" aria-hidden="true">∞</div><h1>Bienvenida a TejiendoHogar</h1><p>Prendas y hogar tejidos a mano</p></header>
+  <div class="auth-card"><nav class="auth-tabs" aria-label="Acceso a la cuenta"><a href="{% url 'accounts:login' %}" {% if auth_tab == 'login' %}aria-current="page"{% endif %}>Iniciar Sesión</a><a href="{% url 'accounts:registro' %}" {% if auth_tab == 'registro' %}aria-current="page"{% endif %}>Crear Cuenta</a></nav>
+  {% block auth_content %}{% endblock %}<footer class="auth-footer">♧ &nbsp; COMERCIO JUSTO • COMPRA PROTEGIDA</footer></div>
+</section>{% endblock %}
+{% block scripts %}<script src="{% static 'js/auth.js' %}" defer></script>{% endblock %}

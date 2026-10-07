@@ -1,0 +1,7 @@
+Hola {{ user.nombre }},
+
+Recibimos una solicitud para cambiar la contraseña de tu cuenta de TejiendoHogar.
+Abre este enlace para elegir una nueva contraseña:
+{{ protocol }}://{{ domain }}{% url 'accounts:recuperar_confirmar' uidb64=uid token=token %}
+
+Si no solicitaste el cambio, puedes ignorar este mensaje.
