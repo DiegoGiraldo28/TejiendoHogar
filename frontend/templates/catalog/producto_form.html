@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ titulo }} | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}">{% endblock %}
+{% block content %}
+<section class="content-card form-card"><a href="{% url 'catalog:productos' %}">← Volver a productos</a><h1>{{ titulo }}</h1><p class="help-text">Completa los datos del producto. Los campos con asterisco son obligatorios.</p>
+  <form method="post" enctype="multipart/form-data" class="data-form">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+    {% include "partials/_field.html" with field=form.nombre %}
+    <div class="form-two-columns">{% include "partials/_field.html" with field=form.precio %}{% include "partials/_field.html" with field=form.tipo %}</div>
+    {% include "partials/_field.html" with field=form.descripcion %}
+    <div class="image-upload-block">{% include "partials/_field.html" with field=form.imagen %}{% if producto and producto.imagen %}<img id="vista-previa" class="image-preview" src="{{ producto.imagen.url }}" alt="Imagen actual de {{ producto.nombre }}">{% else %}<img id="vista-previa" class="image-preview" alt="Vista previa de la imagen" hidden>{% endif %}</div>
+    <div class="form-two-columns">{% include "partials/_field.html" with field=form.tiempo_produccion_dias %}</div>
+    <fieldset class="stock-fields" data-stock-fields><legend>Existencias para producto disponible</legend><div class="form-two-columns">{% include "partials/_field.html" with field=form.stock_producto %}{% include "partials/_field.html" with field=form.stock_minimo %}</div></fieldset>
+    <div class="form-actions"><button class="primary-button" type="submit">Guardar producto</button><a class="secondary-button button-link" href="{% url 'catalog:productos' %}">Cancelar</a></div>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/catalogo.js' %}" defer></script>{% endblock %}

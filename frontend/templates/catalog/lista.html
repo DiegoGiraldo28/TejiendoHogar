@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load humanize static %}
+{% block title %}Catálogo de productos | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}">{% endblock %}
+{% block content %}
+<section class="page-wrap customer-catalog">
+  <header class="page-heading customer-heading">
+    <div><p class="eyebrow">Hecho a mano en Colombia</p><h1>Catálogo de productos</h1></div>
+    <form method="get" class="customer-search" role="search">
+      <label class="visually-hidden" for="buscar-catalogo">Buscar producto</label>
+      <input id="buscar-catalogo" name="q" type="search" value="{{ busqueda }}" placeholder="Buscar producto">
+      {% if tipo_seleccionado %}<input type="hidden" name="tipo" value="{{ tipo_seleccionado }}">{% endif %}
+      <button class="secondary-button" type="submit">⌕ Buscar</button>
+    </form>
+  </header>
+
+  <nav class="catalog-tabs" aria-label="Filtrar catálogo">
+    <a href="{% url 'catalog:lista' %}{% if busqueda %}?q={{ busqueda|urlencode }}{% endif %}" {% if not tipo_seleccionado %}aria-current="page"{% endif %}>Todos</a>
+    <a href="{% url 'catalog:lista' %}?tipo=Disponible{% if busqueda %}&amp;q={{ busqueda|urlencode }}{% endif %}" {% if tipo_seleccionado == 'Disponible' %}aria-current="page"{% endif %}>Disponibles</a>
+    <a href="{% url 'catalog:lista' %}?tipo=Sobre_pedido{% if busqueda %}&amp;q={{ busqueda|urlencode }}{% endif %}" {% if tipo_seleccionado == 'Sobre_pedido' %}aria-current="page"{% endif %}>Sobre pedido</a>
+  </nav>
+
+  {% if pagina.object_list %}
+    <div class="customer-product-grid">
+      {% for producto in pagina %}
+        <article class="customer-product-card">
+          <a class="product-image-link" href="{% url 'catalog:detalle' producto.id_producto %}" aria-label="Ver {{ producto.nombre }}">
+            <img class="customer-product-image" src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" loading="lazy">
+          </a>
+          <div class="customer-product-info">
+            {% if producto.tipo == 'Sobre_pedido' %}
+              <span class="badge badge-order">Sobre pedido · se confecciona en {{ producto.tiempo_produccion_dias }} días</span>
+            {% elif producto.stock_producto == 0 %}
+              <span class="badge badge-muted">Agotado</span>
+            {% else %}
+              <span class="badge badge-success">Disponible</span>
+            {% endif %}
+            <h2><a href="{% url 'catalog:detalle' producto.id_producto %}">{{ producto.nombre }}</a></h2>
+            <p class="customer-price">$ {{ producto.precio|floatformat:0|intcomma }}</p>
+            <a class="secondary-button button-link detail-button" href="{% url 'catalog:detalle' producto.id_producto %}">Ver detalle</a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+    {% include "partials/_paginacion.html" with pagina=pagina %}
+  {% else %}
+    <section class="empty-state" aria-live="polite">
+      <h2>No encontramos productos</h2>
+      <p>Prueba otra búsqueda o revisa todos los productos disponibles.</p>
+      <a class="secondary-button button-link" href="{% url 'catalog:lista' %}">Ver todo el catálogo</a>
+    </section>
+  {% endif %}
+</section>
+{% endblock %}

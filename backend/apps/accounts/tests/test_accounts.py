@@ -13,16 +13,6 @@ from apps.accounts.services import registrar_cliente
 Usuario = get_user_model()
 
 
-@pytest.fixture
-def cliente(db):
-    return Usuario.objects.create_user("ana@example.com", "ClaveFuerte-2026", nombre="Ana")
-
-
-@pytest.fixture
-def emprendedora(db):
-    return Usuario.objects.create_superuser("taller@example.com", "ClaveFuerte-2026", nombre="Taller")
-
-
 def registro_data(**cambios):
     datos = {"nombre": "Luz Tejidos", "correo": "luz@example.com", "password": "ClaveFuerte-2026", "confirmar_password": "ClaveFuerte-2026", "telefono": "300 123 4567", "direccion": "Calle 10", "perfil": "Cliente"}
     return {**datos, **cambios}
@@ -88,10 +78,10 @@ def test_registro_emprendedora_se_rechaza_sin_crear(client):
 @pytest.mark.django_db
 def test_login_coincidente_y_redireccion_por_rol(client, cliente, emprendedora):
     respuesta_cliente = client.post(reverse("accounts:login"), {"correo": cliente.correo, "password": "ClaveFuerte-2026", "perfil": "Cliente"})
-    assert respuesta_cliente.url == reverse("accounts:cliente")
+    assert respuesta_cliente.url == reverse("catalog:lista")
     client.logout()
     respuesta_taller = client.post(reverse("accounts:login"), {"correo": emprendedora.correo, "password": "ClaveFuerte-2026", "perfil": "Emprendedora"})
-    assert respuesta_taller.url == reverse("accounts:emprendedora")
+    assert respuesta_taller.url == reverse("alerts:panel")
 
 
 @pytest.mark.django_db
@@ -110,8 +100,8 @@ def test_selector_no_coincidente_no_autentica(client, cliente):
 @pytest.mark.django_db
 def test_login_y_registro_redirigen_a_usuario_autenticado(client, cliente):
     client.force_login(cliente)
-    assert client.get(reverse("accounts:login")).url == reverse("accounts:cliente")
-    assert client.get(reverse("accounts:registro")).url == reverse("accounts:cliente")
+    assert client.get(reverse("accounts:login")).url == reverse("catalog:lista")
+    assert client.get(reverse("accounts:registro")).url == reverse("catalog:lista")
 
 
 @pytest.mark.django_db
@@ -161,11 +151,13 @@ def test_roles_protegen_pantallas_y_anonimo_va_login(client, cliente, emprendedo
 def test_raiz_y_paginas_correctas(client, cliente, emprendedora):
     assert client.get("/").url == reverse("accounts:login")
     client.force_login(cliente)
-    assert client.get("/").url == reverse("accounts:cliente")
-    assert client.get(reverse("accounts:cliente")).status_code == 200
+    assert client.get("/").url == reverse("catalog:lista")
+    respuesta_cliente = client.get(reverse("accounts:cliente"))
+    assert respuesta_cliente.status_code == 302 and respuesta_cliente.url == reverse("catalog:lista")
     client.force_login(emprendedora)
-    assert client.get("/").url == reverse("accounts:emprendedora")
-    assert client.get(reverse("accounts:emprendedora")).status_code == 200
+    assert client.get("/").url == reverse("alerts:panel")
+    respuesta_emprendedora = client.get(reverse("accounts:emprendedora"))
+    assert respuesta_emprendedora.status_code == 302 and respuesta_emprendedora.url == reverse("alerts:panel")
 
 
 @pytest.mark.django_db

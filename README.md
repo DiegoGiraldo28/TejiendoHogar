@@ -1,16 +1,16 @@
 # TejiendoHogar
 
-Backend Django de TejiendoHogar. Esta fase implementa únicamente registro, acceso, recuperación y perfil de usuario.
+Aplicación monolítica Django con PostgreSQL y plantillas del servidor. La Fase 1 implementa usuarios y autenticación. La Fase 2 implementa gestión de productos, insumos, entradas, recetas y panel para la Emprendedora, además del catálogo público y un resumen provisional de pedido para el Cliente. El pedido no se persiste; carrito, checkout y pago corresponden a la Fase 3.
 
 ## Requisitos
 
-- Python 3.10 o posterior (desarrollo del proyecto: Python 3.12).
-- PostgreSQL 16 instalado localmente y una base vacía llamada `tejiendohogar_dev`.
-- No se requiere Node, contenedores ni Django Admin.
+- Python 3.10 o posterior (equipo de desarrollo: Python 3.12).
+- PostgreSQL 16 local y una base vacía llamada `tejiendohogar_dev`.
+- Git. No se requiere Node, npm, contenedores ni Django Admin.
 
 ## Instalación en Windows PowerShell
 
-Desde la carpeta raíz del repositorio:
+Desde la raíz del repositorio:
 
 ```powershell
 python -m venv venv
@@ -20,32 +20,37 @@ python -m pip install -r backend/requirements/dev.txt
 Copy-Item .env.example .env
 ```
 
-Edita `.env` con los datos de tu base PostgreSQL local. `SECRET_KEY` debe ser una clave aleatoria local y no se debe subir al repositorio. En macOS/Linux usa `python3 -m venv venv` y `source venv/bin/activate`.
+Completa `.env` con la conexión local a PostgreSQL. Mantén `.env` fuera de Git. En macOS/Linux crea el entorno con `python3 -m venv venv` y actívalo con `source venv/bin/activate`.
 
-En pgAdmin 4 registra el servidor con host `localhost`, puerto `5432`, usuario y contraseña locales; crea o selecciona la base `tejiendohogar_dev` en UTF8. Las tablas de la aplicación se crean con migraciones; **no ejecutes `tejiendohogar_schema.sql`**.
+En pgAdmin 4 registra el servidor usando `localhost:5432`, las credenciales de tu instalación y la base `tejiendohogar_dev`. Si la base aún no existe, créala desde pgAdmin. No ejecutes `tejiendohogar_schema.sql`; Django administra el esquema con migraciones.
+
+## Migraciones y datos de muestra
 
 ```powershell
-python backend/manage.py makemigrations accounts
+python backend/manage.py makemigrations
 python backend/manage.py migrate
+python backend/manage.py cargar_datos_demo
 python backend/manage.py createsuperuser
 python backend/manage.py runserver
 ```
 
-Visita http://127.0.0.1:8000/. El comando `createsuperuser` crea una cuenta Emprendedora. El correo de restablecimiento de contraseña aparece en la consola de desarrollo.
+El comando de datos demo es idempotente y crea seis insumos, ocho productos, recetas e imágenes PNG mínimas sin dependencias de imágenes. Abre `http://127.0.0.1:8000/`.
 
-## Pruebas
+## Probar y revisar cobertura
 
-Con el entorno virtual activado y una conexión PostgreSQL válida en `.env`:
+Entra a `backend/` y ejecuta las pruebas y la revisión de configuración desde allí:
 
 ```powershell
-cd backend
-pytest --cov=apps.accounts --cov-report=term-missing
+python -m pytest --cov=apps.accounts --cov=apps.catalog --cov=apps.inventory --cov=apps.alerts --cov=apps.orders --cov-report=term-missing --cov-fail-under=80
+python manage.py check
 ```
 
-El pipeline requiere una cobertura mínima del 80% y prepara PostgreSQL 16 automáticamente.
+En CI se usa PostgreSQL 16 efímero y Python 3.12. Las pruebas necesitan una base de pruebas accesible según las variables `DB_*`.
 
-## Fase actual y pendientes
+## Prueba de carga del equipo
 
-- Implementado: Cliente, Emprendedora y Operaria (sin panel); registro, login, logout POST, recuperación de contraseña, perfil y permisos por rol.
-- Pendiente para siguientes fases: catálogo, pedidos, inventario y asistente PLUS.
-- Producción: S3, SES, RDS, Elastic Beanstalk y CloudWatch están indicados como TODO; no se activan ni requieren credenciales.
+Con los datos demo listos, inicia el servidor con `python backend/manage.py runserver`. En K6 o JMeter configura una solicitud `GET` a `http://127.0.0.1:8000/catalogo/`, usa 500 usuarios virtuales o hilos, aumenta la concurrencia gradualmente y registra duración, percentiles y errores. Ejecuta la medición con la base local disponible y sin depurar el servidor en producción; K6/JMeter son herramientas externas del equipo y no forman parte de las dependencias del proyecto.
+
+## Seguridad y despliegue
+
+No compartas `.env`, claves ni contraseñas. Producción, AWS/S3 y SES permanecen como estructura documentada sin recursos ni credenciales activos.

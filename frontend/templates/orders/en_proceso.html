@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load humanize static %}
+{% block title %}Pedido en proceso | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}">{% endblock %}
+{% block content %}
+<section class="page-wrap order-result-wrap">
+  <article class="content-card order-result">
+    {% if confirmado %}
+      <p class="eyebrow">Resumen de tu selección</p>
+      <h1>Pedido en proceso</h1>
+      <p>Este es el resumen de los productos que elegiste.</p>
+      <dl class="order-summary">
+        <div><dt>Producto</dt><dd>{{ producto.nombre }}</dd></div>
+        <div><dt>Cantidad</dt><dd>{{ cantidad }}</dd></div>
+        <div><dt>Subtotal</dt><dd>$ {{ subtotal|floatformat:0|intcomma }}</dd></div>
+      </dl>
+      <p class="help-text">En la siguiente fase podrás completar y confirmar tu compra.</p>
+      <!-- TODO Fase 3: carrito, checkout y simulación de pago. -->
+      <a class="secondary-button button-link" href="{% url 'catalog:lista' %}">Volver al catálogo</a>
+    {% else %}
+      <h1>No pudimos continuar con el pedido</h1>
+      <p>Revisa la información: el producto puede no estar disponible o la cantidad puede superar las existencias.</p>
+      {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+      {% for error in form.producto_id.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+      {% for error in form.cantidad.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+      <a class="secondary-button button-link" href="{% url 'catalog:lista' %}">Volver al catálogo</a>
+    {% endif %}
+  </article>
+</section>
+{% endblock %}

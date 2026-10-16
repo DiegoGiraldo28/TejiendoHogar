@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Registrar entrada | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/inventory.css' %}">{% endblock %}
+{% block content %}<section class="content-card form-card"><a href="{% url 'inventory:insumos' %}">← Volver al inventario</a><h1>Registrar entrada</h1><p>{{ insumo.nombre }} · disponible: {{ insumo.cantidad_disponible|floatformat:2 }} {{ insumo.get_unidad_medida_display }}</p><form method="post" class="data-form">{% csrf_token %}{% include "partials/_field.html" with field=form.cantidad %}<div class="form-actions"><button class="primary-button" type="submit">Registrar entrada</button><a class="secondary-button button-link" href="{% url 'inventory:insumo_movimientos' insumo.id_insumo %}">Ver historial</a></div></form></section>{% endblock %}

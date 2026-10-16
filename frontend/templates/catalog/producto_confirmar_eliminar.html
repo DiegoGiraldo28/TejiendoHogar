@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}Confirmar eliminación | TejiendoHogar{% endblock %}
+{% block content %}<section class="content-card"><h1>Eliminar producto</h1><p>¿Seguro que quieres eliminar «{{ producto.nombre }}»?</p><p>Si el producto tiene pedidos, tendrás que desactivarlo en su lugar.</p><form method="post">{% csrf_token %}<button class="danger-button" type="submit">Sí, eliminar</button> <a class="secondary-button button-link" href="{% url 'catalog:productos' %}">Cancelar</a></form></section>{% endblock %}

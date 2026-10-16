@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Receta de {{ producto.nombre }} | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/inventory.css' %}">{% endblock %}
+{% block content %}<section class="content-card form-card"><a href="{% url 'catalog:productos' %}">← Volver a productos</a><p class="eyebrow">Receta de producción</p><h1>{{ producto.nombre }}</h1><p class="help-text">Indica cuánto de cada materia prima se requiere para fabricar una unidad.</p>
+<form method="post" class="data-form">{% csrf_token %}{{ formset.management_form }}{% if formset.non_form_errors %}<div class="form-errors" role="alert">{{ formset.non_form_errors }}</div>{% endif %}
+  <div data-lineas-receta>{% for form in formset %}<div class="recipe-row">{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}{% include "partials/_field.html" with field=form.insumo %}{% include "partials/_field.html" with field=form.cantidad_requerida %}{% if form.DELETE %}<div class="delete-line">{{ form.DELETE }}<label for="{{ form.DELETE.id_for_label }}">Quitar ingrediente</label></div>{% endif %}{% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}</div>{% endfor %}</div>
+  <template id="linea-receta-vacia"><div class="recipe-row">{% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}{% include "partials/_field.html" with field=formset.empty_form.insumo %}{% include "partials/_field.html" with field=formset.empty_form.cantidad_requerida %}{% if formset.can_delete %}<div class="delete-line">{{ formset.empty_form.DELETE }}<label for="{{ formset.empty_form.DELETE.id_for_label }}">Quitar ingrediente</label></div>{% endif %}</div></template>
+  <button type="button" class="secondary-button" data-agregar-linea>+ Agregar otro insumo</button><div class="form-actions"><button class="primary-button" type="submit">Guardar receta</button><a class="secondary-button button-link" href="{% url 'catalog:productos' %}">Listo</a></div>
+</form></section>{% endblock %}
+{% block scripts %}<script src="{% static 'js/catalogo.js' %}" defer></script>{% endblock %}

@@ -1,17 +1,37 @@
-# Plan de implementación: TejiendoHogar, Fase 1
+# Guía de trabajo: TejiendoHogar
 
-## Alcance
-- Crear el proyecto Django modular con configuración `dev` y `prod`, templates del lado del servidor y PostgreSQL.
-- Implementar exclusivamente usuarios y autenticación: registro Cliente, login con selector validado, logout POST, recuperación, perfil y control de acceso por rol.
-- Dejar las carpetas de catálogo, pedidos, inventario y alertas sin lógica de negocio.
-- Añadir pruebas pytest, workflow de CI y documentación de instalación.
+## Fase actual
+Fase 2: gestión del catálogo para la Emprendedora, insumos, movimientos de entrada, recetas y panel; catálogo público y resumen provisional del pedido para el Cliente. La persistencia de pedidos, carrito, checkout y pago corresponden a la Fase 3.
 
-## Reglas del proyecto
-- `tejiendohogar_schema.sql` es la fuente de verdad para la tabla `usuario`; no ejecutar ni modificar ese SQL.
-- No agregar Django Admin, API REST, frameworks CSS/JS, Node, ni dependencias ajenas al stack declarado.
-- Mantener reglas de negocio en `apps/accounts/services.py`, formularios y vistas delgadas, comentarios breves en español y CSRF activo.
-- No incluir secretos en el repositorio. Desarrollo lee `.env`; producción mantiene AWS como TODO sin activarlo.
-- Antes de entregar, verificar configuración, pruebas y cobertura si el entorno y PostgreSQL disponibles lo permiten. No hacer commits.
+## Apps y dependencias
+- `apps.accounts`: usuarios y autenticación; no importa de apps nuevas.
+- `apps.catalog`: productos y pantallas de gestión; puede importar `accounts`, nunca `inventory`.
+- `apps.inventory`: insumos, recetas y movimientos; puede importar `accounts` y `catalog`.
+- `apps.alerts`: panel; puede importar `accounts`, `catalog` e `inventory`.
+- `apps.orders`: contiene únicamente el resumen POST provisional; no crea pedidos ni tiene modelos.
 
-## Próximas fases
-Implementar catálogo, pedidos e inventario después de aprobar esta fase; las alertas PLUS quedan para su fase definida.
+Evita dependencias cíclicas. Las tablas de dominio se crean mediante migraciones; `tejiendohogar_schema.sql` es referencia y nunca se ejecuta. No uses SQL crudo.
+
+## Reglas de implementación
+- Django Templates, ORM y formularios Django; CSRF activo.
+- Servicios en `services.py`, con argumentos keyword-only, `full_clean()` y errores `ValidationError` en español.
+- Control de acceso con `rol_requerido` y `RolRequeridoMixin` de `accounts.permissions`.
+- Archivos de imagen sin Pillow: extensión, máximo de 2 MB y firma verificada en el modelo.
+- Solo entradas modifican cantidades de insumos; siempre se guarda su movimiento.
+- No añadir Django Admin, API REST, Node, npm ni dependencias fuera del stack acordado.
+
+## Rutas de Etapa A
+- `/panel/`
+- `/emprendedora/productos/`, `/emprendedora/productos/nuevo/`, `/<id>/editar/`, `/<id>/estado/`, `/<id>/eliminar/`
+- `/emprendedora/productos/<id>/receta/`
+- `/emprendedora/insumos/`, `/emprendedora/insumos/nuevo/`, `/<id>/editar/`, `/<id>/entrada/`, `/<id>/movimientos/`, `/<id>/eliminar/`
+- `/catalogo/`, `/catalogo/<id>/`
+- `POST /pedidos/en-proceso/` para Cliente autenticado.
+
+## Pruebas y ejecución
+Desde `backend/`, usa `python manage.py check`, `python manage.py makemigrations`, `python manage.py migrate`, `python manage.py cargar_datos_demo` y `pytest --cov=apps.accounts --cov=apps.catalog --cov=apps.inventory --cov=apps.alerts --cov=apps.orders --cov-report=term-missing --cov-fail-under=80`.
+
+## Decisiones y pendientes
+- Por dependencia de la tabla `pedido`, `MovimientoInsumo.id_pedido` y su CHECK se incorporan en la Fase 3.
+- La Fase 3 agrega `id_pedido`, integra pedidos con `validar_disponibilidad` y `calcular_requerimiento`, y reemplaza el resumen provisional por carrito, checkout y pago.
+- No hacer commits automáticamente ni incluir secretos en el repositorio.

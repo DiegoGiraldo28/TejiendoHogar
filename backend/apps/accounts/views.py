@@ -15,8 +15,8 @@ from .services import registrar_cliente, actualizar_perfil
 
 
 def destino_rol(usuario):
-    """Devuelve el panel provisional correspondiente al rol."""
-    return "accounts:emprendedora" if usuario.rol == Usuario.Rol.EMPRENDEDORA else "accounts:cliente"
+    """Devuelve el panel activo correspondiente al rol del usuario."""
+    return "alerts:panel" if usuario.rol == Usuario.Rol.EMPRENDEDORA else "catalog:lista"
 
 
 def registro(request):
@@ -53,6 +53,9 @@ class AccesoView(LoginView):
 
     def form_valid(self, form):
         login(self.request, form.usuario)
+        # Respeta el retorno seguro solicitado por una acción protegida.
+        if self.get_redirect_url():
+            return redirect(self.get_success_url())
         return redirect(destino_rol(form.usuario))
 
 
@@ -96,16 +99,16 @@ class RecuperarCompletoView(PasswordResetCompleteView):
 
 @rol_requerido(Usuario.Rol.CLIENTE)
 def pagina_cliente(request):
-    """Página provisional del cliente; TODO: será reemplazada por el catálogo."""
-    return render(request, "accounts/cliente.html")
+    """Conserva la ruta anterior y lleva al catálogo público."""
+    return redirect(destino_rol(request.user))
 
 
 class PaginaEmprendedoraView(RolRequeridoMixin, View):
-    """Página provisional; TODO: será reemplazada por el panel de taller."""
+    """Conserva la ruta anterior y lleva al panel de gestión."""
     roles_permitidos = (Usuario.Rol.EMPRENDEDORA,)
 
     def get(self, request):
-        return render(request, "accounts/emprendedora.html")
+        return redirect(destino_rol(request.user))
 
 
 def inicio(request):
