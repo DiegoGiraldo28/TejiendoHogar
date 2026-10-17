@@ -21,6 +21,7 @@ Evita dependencias cíclicas. Las tablas de dominio se crean mediante migracione
 - No añadir Django Admin, API REST, Node, npm ni dependencias fuera del stack acordado.
 
 ## Rutas de Etapa A
+- `/` (`inicio`) vive en `apps.catalog`: muestra la bienvenida al anónimo y redirige por rol a quien tenga sesión.
 - `/panel/`
 - `/emprendedora/productos/`, `/emprendedora/productos/nuevo/`, `/<id>/editar/`, `/<id>/estado/`, `/<id>/eliminar/`
 - `/emprendedora/productos/<id>/receta/`

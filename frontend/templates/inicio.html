@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}TejiendoHogar | Moda artesanal de madres emprendedoras{% endblock %}
+{% block extra_head %}
+  <meta name="description" content="Descubre prendas tejidas a mano por madres emprendedoras de Colombia y compra directamente a talleres familiares.">
+  <link rel="stylesheet" href="{% static 'css/catalog.css' %}">
+  <link rel="stylesheet" href="{% static 'css/inicio.css' %}?v=home-2">
+{% endblock %}
+{% block content %}
+<div class="inicio-page">
+  <section class="inicio-hero" aria-labelledby="inicio-titulo">
+    <div class="inicio-hero-copy">
+      <p class="inicio-kicker">Moda artesanal hecha en casa</p>
+      <h1 id="inicio-titulo">Prendas tejidas por madres emprendedoras de Colombia</h1>
+      <p class="inicio-hero-description">Compra directamente a talleres familiares, sin intermediarios. Cada prenda tiene precio claro, disponibilidad real y los días que toma confeccionarla.</p>
+      <div class="inicio-hero-actions">
+        <a class="inicio-primary-action" href="{% url 'catalog:lista' %}">Explorar catálogo</a>
+        <a class="inicio-outline-action" href="{% url 'accounts:registro' %}">Crear cuenta</a>
+      </div>
+      <a class="inicio-login-link" href="{% url 'accounts:login' %}">¿Ya tienes cuenta? Inicia sesión</a>
+    </div>
+    <div class="inicio-hero-art" aria-hidden="true">
+      <svg class="inicio-yarn-illustration" viewBox="0 0 480 380" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="240" cy="190" r="166" fill="#f6e6df"/>
+        <path d="M136 218c-9-48 18-102 64-117 48-16 111 10 132 55 21 45 5 103-31 134-37 31-95 36-135 10-19-12-32-32-36-54-5-28 5-58 25-79 28-29 71-39 110-30 39 9 71 37 83 75" fill="#bd593d" stroke="#8d402d" stroke-width="5" stroke-linecap="round"/>
+        <path d="M160 139c37 28 69 59 91 96 20 34 31 69 35 103M126 186c48 10 91 27 127 54 28 21 51 48 68 78M174 270c43-14 87-18 130-13 23 3 46 9 67 18M215 105c8 43 20 84 39 122 15 31 34 59 58 83" fill="none" stroke="#f8dfd3" stroke-width="7" stroke-linecap="round"/>
+        <path d="M301 293c43 13 79 8 112-17M346 315l72-42M349 333l78-42" fill="none" stroke="#8d402d" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="130" cy="105" r="10" fill="#bd593d"/>
+        <circle cx="363" cy="104" r="7" fill="#bd593d"/>
+        <path d="M99 271c-11 9-17 21-17 35M382 168c12 7 20 18 23 31" fill="none" stroke="#bd593d" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </section>
+
+  <section class="inicio-section inicio-steps" aria-labelledby="inicio-steps-title">
+    <div class="inicio-section-heading">
+      <p class="inicio-kicker">Una experiencia sencilla</p>
+      <h2 id="inicio-steps-title">Así de fácil</h2>
+    </div>
+    <div class="inicio-steps-grid">
+      <article class="inicio-step-card">
+        <svg class="inicio-step-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="21" cy="21" r="12" fill="none" stroke="currentColor" stroke-width="3"/><path d="m30 30 10 10M16 21h10M21 16v10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+        <h3>Explora el catálogo</h3><p>Busca prendas por nombre y tipo.</p>
+      </article>
+      <article class="inicio-step-card">
+        <svg class="inicio-step-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="m24 5 16 9v20l-16 9-16-9V14l16-9Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="m8 14 16 10 16-10M24 24v19" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>
+        <h3>Elige tu prenda</h3><p>Disponible o confeccionada sobre pedido.</p>
+      </article>
+      <article class="inicio-step-card">
+        <svg class="inicio-step-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="25" r="17" fill="none" stroke="currentColor" stroke-width="3"/><path d="M24 14v12l8 5M18 4h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+        <h3>Conoce los tiempos</h3><p>Cada prenda indica sus días de confección.</p>
+      </article>
+    </div>
+  </section>
+
+  {% if destacados %}
+    <section class="inicio-section inicio-products" aria-labelledby="inicio-products-title">
+      <div class="inicio-section-heading">
+        <p class="inicio-kicker">Creaciones recientes</p>
+        <h2 id="inicio-products-title">Recién salidas del taller</h2>
+      </div>
+      <div class="customer-product-grid">
+        {% for producto in destacados %}
+          {% include "catalog/_tarjeta_producto.html" %}
+        {% endfor %}
+      </div>
+      <a class="inicio-catalog-link" href="{% url 'catalog:lista' %}">Ver todo el catálogo <span aria-hidden="true">→</span></a>
+    </section>
+  {% endif %}
+
+  <section class="inicio-section inicio-workshop" aria-labelledby="inicio-workshop-title">
+    <div class="inicio-workshop-copy">
+      <p class="inicio-kicker">Para emprendedoras</p>
+      <h2 id="inicio-workshop-title">¿Tienes un taller de confección?</h2>
+      <ul class="inicio-benefits-list">
+        <li>Catálogo digital propio, sin fotos sueltas en chats.</li>
+        <li>Control de telas, hilos y mercería, con alertas de stock bajo.</li>
+        <li>Venta directa, sin comisiones de intermediarios.</li>
+      </ul>
+      <p class="inicio-account-note">Las cuentas de Emprendedora las crea el administrador de la plataforma.</p>
+      <a class="inicio-outline-action" href="{% url 'accounts:login' %}">Ingresar a mi taller</a>
+    </div>
+  </section>
+</div>
+
+<footer class="inicio-footer">
+  <div class="inicio-footer-inner">
+    <a class="inicio-footer-brand" href="{% url 'inicio' %}">TejiendoHogar</a>
+    <nav class="inicio-footer-links" aria-label="Enlaces del pie de página">
+      <a href="{% url 'catalog:lista' %}">Catálogo</a>
+      <a href="{% url 'accounts:login' %}">Iniciar sesión</a>
+      <a href="{% url 'accounts:registro' %}">Crear cuenta</a>
+    </nav>
+    <p>Proyecto académico · Ingeniería de Software III · Universidad del Quindío</p>
+    <p>Tus datos se tratan conforme a la Ley 1581 de 2012.</p>
+  </div>
+</footer>
+{% endblock %}

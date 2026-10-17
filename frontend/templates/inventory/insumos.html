@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Materia prima e insumos | TejiendoHogar{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'css/inventory.css' %}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/inventory.css' %}?v=insumos-heading-1">{% endblock %}
 {% block content %}
 <section class="page-wrap">
-  <header class="page-heading"><div><p class="eyebrow">Inventario</p><h1>Materia prima e insumos</h1></div><a class="primary-button button-link" href="{% url 'inventory:insumo_nuevo' %}">Registrar material</a></header>
+  <header class="insumos-heading"><h1>Materia prima e insumos</h1><a class="register-material-button" href="{% url 'inventory:insumo_nuevo' %}">Registrar material</a></header>
   <form method="get" class="filters"><label class="visually-hidden" for="buscar-insumo">Buscar insumo</label><input id="buscar-insumo" name="q" value="{{ request.GET.q }}" placeholder="Buscar insumo"><button class="secondary-button" type="submit">Buscar</button></form>
   <section class="inventory-panel"><div class="section-heading"><h2>Disponibilidad de materiales</h2><span>{{ pagina.paginator.count }} registros</span></div>
   {% if pagina.object_list %}<div class="table-scroll"><table class="inventory-table"><thead><tr><th scope="col">Insumo</th><th scope="col">Cantidad</th><th scope="col">Unidad</th><th scope="col">Stock mín.</th><th scope="col">Estado</th><th scope="col">Acción</th></tr></thead><tbody>

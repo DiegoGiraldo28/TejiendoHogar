@@ -149,7 +149,9 @@ def test_roles_protegen_pantallas_y_anonimo_va_login(client, cliente, emprendedo
 
 @pytest.mark.django_db
 def test_raiz_y_paginas_correctas(client, cliente, emprendedora):
-    assert client.get("/").url == reverse("accounts:login")
+    respuesta_anonima = client.get("/")
+    assert respuesta_anonima.status_code == 200
+    assert any(template.name == "inicio.html" for template in respuesta_anonima.templates)
     client.force_login(cliente)
     assert client.get("/").url == reverse("catalog:lista")
     respuesta_cliente = client.get(reverse("accounts:cliente"))

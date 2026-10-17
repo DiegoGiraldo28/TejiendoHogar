@@ -101,6 +101,13 @@ def listar_publicos(*, busqueda="", tipo=None):
     return Paginator(productos, 12)
 
 
+def productos_destacados(*, limite=4):
+    """Devuelve los productos activos más recientes para mostrar en la bienvenida."""
+    return Producto.objects.filter(activo=True).only(
+        "id_producto", "nombre", "precio", "imagen", "tipo", "tiempo_produccion_dias", "stock_producto"
+    ).order_by("-fecha_creacion")[:limite]
+
+
 def obtener_publico(*, id_producto):
     """Devuelve un producto activo o lanza Http404 si no es visible."""
     try:

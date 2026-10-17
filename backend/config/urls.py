@@ -3,7 +3,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path
 
-from apps.accounts.views import inicio
+from apps.catalog.views import inicio
 
 urlpatterns = [
     path("", inicio, name="inicio"),

@@ -23,23 +23,7 @@
   {% if pagina.object_list %}
     <div class="customer-product-grid">
       {% for producto in pagina %}
-        <article class="customer-product-card">
-          <a class="product-image-link" href="{% url 'catalog:detalle' producto.id_producto %}" aria-label="Ver {{ producto.nombre }}">
-            <img class="customer-product-image" src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" loading="lazy">
-          </a>
-          <div class="customer-product-info">
-            {% if producto.tipo == 'Sobre_pedido' %}
-              <span class="badge badge-order">Sobre pedido · se confecciona en {{ producto.tiempo_produccion_dias }} días</span>
-            {% elif producto.stock_producto == 0 %}
-              <span class="badge badge-muted">Agotado</span>
-            {% else %}
-              <span class="badge badge-success">Disponible</span>
-            {% endif %}
-            <h2><a href="{% url 'catalog:detalle' producto.id_producto %}">{{ producto.nombre }}</a></h2>
-            <p class="customer-price">$ {{ producto.precio|floatformat:0|intcomma }}</p>
-            <a class="secondary-button button-link detail-button" href="{% url 'catalog:detalle' producto.id_producto %}">Ver detalle</a>
-          </div>
-        </article>
+        {% include "catalog/_tarjeta_producto.html" %}
       {% endfor %}
     </div>
     {% include "partials/_paginacion.html" with pagina=pagina %}

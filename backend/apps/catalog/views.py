@@ -7,12 +7,19 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.models import Usuario
 from apps.accounts.permissions import rol_requerido
+from apps.accounts.views import destino_rol
 from .forms import ProductoForm
 from .models import Producto
 from .services import (
     actualizar_producto, cambiar_estado, crear_producto, eliminar_producto,
-    listar_admin, listar_publicos, obtener_publico,
+    listar_admin, listar_publicos, obtener_publico, productos_destacados,
 )
+
+
+def inicio(request):
+    if request.user.is_authenticated:
+        return redirect(destino_rol(request.user))
+    return render(request, "inicio.html", {"destacados": productos_destacados()})
 
 
 @rol_requerido(Usuario.Rol.EMPRENDEDORA)

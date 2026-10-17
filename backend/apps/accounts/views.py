@@ -109,9 +109,3 @@ class PaginaEmprendedoraView(RolRequeridoMixin, View):
 
     def get(self, request):
         return redirect(destino_rol(request.user))
-
-
-def inicio(request):
-    if not request.user.is_authenticated:
-        return redirect("accounts:login")
-    return redirect(destino_rol(request.user))

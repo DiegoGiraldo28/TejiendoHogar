@@ -12,6 +12,48 @@
   padding: 1rem;
 }
 
+.insumos-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.insumos-heading h1 {
+  margin: .2rem 0 1rem;
+  font-family: var(--fuente-titulo);
+}
+
+.register-material-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: .65rem 1rem;
+  border-radius: 10px;
+  background: var(--terracota);
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.register-material-button:hover {
+  background: var(--terracota-oscuro);
+}
+
+@media (max-width: 560px) {
+  .insumos-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .register-material-button {
+    align-self: flex-start;
+  }
+}
+
 .section-heading {
   display: flex;
   align-items: center;
@@ -62,6 +104,19 @@
 
 .dashboard-wrap > .page-heading {
   margin-bottom: 1.25rem;
+}
+
+.dashboard-wrap > .page-heading .dashboard-greeting {
+  margin: .2rem 0 .5rem;
+  font-size: 1.25rem;
+}
+
+.dashboard-wrap > .page-heading .dashboard-title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .dashboard-kpis {
