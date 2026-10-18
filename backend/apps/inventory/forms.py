@@ -16,7 +16,7 @@ class InsumoForm(forms.ModelForm):
     class Meta:
         model = Insumo
         fields = ["nombre", "unidad_medida", "cantidad_disponible", "stock_minimo"]
-        labels = {"nombre": "Nombre de la materia prima", "unidad_medida": "Unidad de medida", "cantidad_disponible": "Cantidad inicial", "stock_minimo": "Stock mínimo"}
+        labels = {"nombre": "Nombre de la materia prima", "unidad_medida": "Unidad de medida", "cantidad_disponible": "Cantidad", "stock_minimo": "Stock mínimo"}
         help_texts = {"cantidad_disponible": "Si ingresas una cantidad inicial, se registrará como una entrada."}
         widgets = {
             "cantidad_disponible": forms.NumberInput(attrs={"min": "0", "step": "0.01"}),

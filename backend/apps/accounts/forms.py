@@ -3,19 +3,25 @@ import re
 from django import forms
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.core.exceptions import ValidationError
 from .models import Usuario
 
 
 class RegistroForm(forms.Form):
-    nombre = forms.CharField(max_length=150, label="Nombre completo")
-    correo = forms.EmailField(max_length=150, label="Correo electrónico")
-    password = forms.CharField(label="Contraseña", widget=forms.PasswordInput(attrs={"data-password-toggle": ""}))
-    confirmar_password = forms.CharField(label="Confirmar contraseña", widget=forms.PasswordInput)
-    telefono = forms.CharField(max_length=20, required=False, label="Teléfono")
+    nombre = forms.CharField(max_length=150, label="Nombre completo", widget=forms.TextInput(attrs={"placeholder": "María Fernanda Gómez", "autocomplete": "name"}))
+    correo = forms.EmailField(max_length=150, label="Correo electrónico", widget=forms.EmailInput(attrs={"placeholder": "tu@correo.com", "autocomplete": "email"}))
+    telefono = forms.CharField(max_length=20, required=False, label="Teléfono / WhatsApp", widget=forms.TextInput(attrs={"type": "tel", "placeholder": "+57 310 123 4567", "autocomplete": "tel"}))
+    password = forms.CharField(label="Contraseña", help_text="Mínimo 8 caracteres, combinando letras y números", widget=forms.PasswordInput(attrs={"data-password-toggle": "", "placeholder": "Mínimo 8 caracteres", "autocomplete": "new-password"}))
+    confirmar_password = forms.CharField(label="Confirmar contraseña", widget=forms.PasswordInput(attrs={"placeholder": "Repite tu contraseña", "autocomplete": "new-password"}))
     direccion = forms.CharField(max_length=255, required=False, label="Dirección", widget=forms.TextInput)
     perfil = forms.ChoiceField(choices=[("Cliente", "Soy Cliente"), ("Emprendedora", "Soy Emprendedora")], initial="Cliente", widget=forms.RadioSelect)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for nombre, campo in self.fields.items():
+            if nombre != "perfil":
+                campo.widget.attrs["aria-describedby"] = f"id_{nombre}_help id_{nombre}_errors"
 
     def clean_correo(self):
         correo = self.cleaned_data["correo"].strip().lower()
@@ -86,3 +92,23 @@ class PerfilForm(forms.ModelForm):
 
 class CorreoRecuperacionForm(PasswordResetForm):
     email = forms.EmailField(label="Correo electrónico", widget=forms.EmailInput(attrs={"placeholder": "tu@correo.com"}))
+
+
+class NuevaContrasenaForm(SetPasswordForm):
+    """Presenta en español los campos del restablecimiento de contraseña."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["new_password1"].label = "Nueva contraseña"
+        self.fields["new_password1"].help_text = (
+            "Usa al menos 8 caracteres, evita datos personales y contraseñas comunes; "
+            "combina letras y números."
+        )
+        self.fields["new_password2"].label = "Confirmar nueva contraseña"
+        self.fields["new_password2"].help_text = "Escribe nuevamente la contraseña para verificarla."
+        for nombre in ("new_password1", "new_password2"):
+            self.fields[nombre].widget.attrs.update({
+                "data-toggle-password": "",
+                "autocomplete": "new-password",
+                "aria-describedby": f"id_{nombre}_help id_{nombre}_errors",
+            })

@@ -2,6 +2,7 @@
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db.models import F
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.models import Usuario
@@ -16,10 +17,27 @@ from .services import actualizar_insumo, crear_insumo, eliminar_insumo, guardar_
 def lista_insumos(request):
     insumos = Insumo.objects.order_by("nombre")
     busqueda = request.GET.get("q", "").strip()
+    estado = request.GET.get("estado", "")
     if busqueda:
         insumos = insumos.filter(nombre__icontains=busqueda)
+    if estado == "bajo":
+        insumos = insumos.filter(cantidad_disponible__lte=F("stock_minimo"))
+    elif estado == "disponible":
+        insumos = insumos.filter(cantidad_disponible__gt=F("stock_minimo"))
     pagina = Paginator(insumos, 12).get_page(request.GET.get("page"))
-    return render(request, "inventory/insumos.html", {"pagina": pagina})
+    formulario = InsumoForm(request.POST or None)
+    if request.method == "POST" and formulario.is_valid():
+        try:
+            crear_insumo(**formulario.cleaned_data)
+        except ValidationError as error:
+            _agregar_errores(formulario, error)
+        else:
+            messages.success(request, "Materia prima registrada correctamente.")
+            return redirect("inventory:insumos")
+    return render(request, "inventory/insumos.html", {
+        "pagina": pagina, "form": formulario, "busqueda": busqueda,
+        "estado_seleccionado": estado,
+    })
 
 
 @rol_requerido(Usuario.Rol.EMPRENDEDORA)

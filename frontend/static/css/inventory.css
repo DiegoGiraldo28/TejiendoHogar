@@ -12,6 +12,61 @@
   padding: 1rem;
 }
 
+.inventory-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(280px, .9fr);
+  align-items: start;
+  gap: 1.5rem;
+}
+
+.inventory-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin: 1rem 0;
+}
+
+.inventory-filters input {
+  flex: 1 1 220px;
+  min-height: 44px;
+  padding: .6rem .75rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-campo);
+}
+
+.material-form-panel h2 {
+  margin: .25rem 0;
+  font-size: 1.1rem;
+}
+
+.material-form-panel .help-text {
+  margin: .25rem 0 1rem;
+}
+
+.material-form-panel .form-field input,
+.material-form-panel .form-field select {
+  width: 100%;
+  min-height: 44px;
+}
+
+.badge-warning,
+.badge-success {
+  display: inline-block;
+  padding: .15rem .65rem;
+  border-radius: 999px;
+  font-size: .78rem;
+}
+
+.badge-warning {
+  background: #ffeadc;
+  color: #a74520;
+}
+
+.badge-success {
+  background: #e4f2e9;
+  color: #276444;
+}
+
 .insumos-heading {
   display: flex;
   align-items: flex-start;
@@ -231,5 +286,11 @@
   .recipe-row {
     grid-template-columns: minmax(220px, 1.5fr) minmax(150px, 1fr) auto;
     align-items: end;
+  }
+}
+
+@media (max-width: 900px) {
+  .inventory-layout {
+    grid-template-columns: 1fr;
   }
 }

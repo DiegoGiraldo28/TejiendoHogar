@@ -8,7 +8,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
 
-from .forms import RegistroForm, LoginForm, PerfilForm, CorreoRecuperacionForm
+from .forms import RegistroForm, LoginForm, PerfilForm, CorreoRecuperacionForm, NuevaContrasenaForm
 from .models import Usuario
 from .permissions import rol_requerido, RolRequeridoMixin
 from .services import registrar_cliente, actualizar_perfil
@@ -90,6 +90,7 @@ class RecuperarEnviadoView(PasswordResetDoneView):
 
 class RecuperarConfirmarView(PasswordResetConfirmView):
     template_name = "accounts/recuperar_confirmar.html"
+    form_class = NuevaContrasenaForm
     success_url = reverse_lazy("accounts:recuperar_completo")
 
 

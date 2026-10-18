@@ -16,7 +16,7 @@ INSTALLED_APPS = [
     "django.contrib.messages", "django.contrib.staticfiles", "django.contrib.humanize",
     "apps.accounts.apps.AccountsConfig", "apps.catalog.apps.CatalogConfig",
     "apps.inventory.apps.InventoryConfig", "apps.alerts.apps.AlertsConfig",
-    "apps.orders.apps.OrdersConfig",
+    "apps.orders.apps.OrdersConfig", "apps.legal.apps.LegalConfig",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
@@ -46,6 +46,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "apps.accounts.validators.LetrasYNumerosValidator"},
 ]
 LANGUAGE_CODE = "es-co"
 TIME_ZONE = "America/Bogota"

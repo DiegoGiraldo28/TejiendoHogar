@@ -61,6 +61,21 @@ def test_registro_crea_cliente_y_redirige(client):
 
 
 @pytest.mark.django_db
+def test_registro_muestra_orden_ayuda_legal_y_telefono_visible(client):
+    respuesta = client.get(reverse("accounts:registro"))
+    contenido = respuesta.content.decode()
+    posiciones = [contenido.index(f'name="{nombre}"') for nombre in (
+        "nombre", "correo", "telefono", "password", "confirmar_password",
+    )]
+
+    assert posiciones == sorted(posiciones)
+    assert 'type="tel"' in contenido
+    assert "Mínimo 8 caracteres, combinando letras y números" in contenido
+    assert "Términos y condiciones" in contenido and "Política de Privacidad" in contenido
+    assert "100% PROTEGIDA" in contenido
+
+
+@pytest.mark.django_db
 def test_registro_muestra_errores_de_datos(client, cliente):
     respuesta = client.post(reverse("accounts:registro"), registro_data(correo="ANA@example.com", password="uno", confirmar_password="dos"))
     assert respuesta.status_code == 200
@@ -72,6 +87,17 @@ def test_registro_muestra_errores_de_datos(client, cliente):
 def test_registro_emprendedora_se_rechaza_sin_crear(client):
     respuesta = client.post(reverse("accounts:registro"), registro_data(perfil="Emprendedora"))
     assert "Las cuentas de Emprendedora las crea" in respuesta.content.decode()
+    assert Usuario.objects.count() == 0
+
+
+@pytest.mark.parametrize("password", ["soloLetras", "12345678"])
+@pytest.mark.django_db
+def test_registro_exige_letras_y_numeros(client, password):
+    respuesta = client.post(reverse("accounts:registro"), registro_data(
+        password=password, confirmar_password=password,
+    ))
+    assert respuesta.status_code == 200
+    assert "combinar al menos una letra y un número" in respuesta.content.decode()
     assert Usuario.objects.count() == 0
 
 

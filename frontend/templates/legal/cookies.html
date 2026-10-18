@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Política de cookies | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/legal.css' %}">{% endblock %}
+{% block content %}
+<article class="legal-content">
+  <p class="eyebrow">Tecnologías necesarias</p>
+  <h1>Política de cookies</h1>
+  <p>TejiendoHogar utiliza únicamente cookies estrictamente necesarias para el funcionamiento de Django, como mantener la sesión iniciada y proteger los formularios mediante CSRF.</p>
+  <h2>Uso y duración</h2>
+  <p>Estas cookies permiten identificar la sesión y proteger las solicitudes del sitio. Su duración depende de la configuración de sesión del navegador y del servidor. La plataforma no utiliza actualmente cookies publicitarias ni de seguimiento analítico.</p>
+  <h2>Preferencias del navegador</h2>
+  <p>El navegador permite bloquear o eliminar cookies. Si se bloquean las cookies necesarias, algunas funciones como el inicio de sesión o el envío seguro de formularios pueden dejar de funcionar.</p>
+  <p>Responsable: [Nombre legal del responsable] · NIT: [NIT] · Correo: [Correo de contacto].</p>
+</article>
+{% endblock %}

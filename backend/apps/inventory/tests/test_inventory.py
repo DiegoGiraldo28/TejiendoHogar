@@ -203,6 +203,25 @@ def test_vistas_crean_insumo_registran_entrada_y_muestran_historial(client, empr
 
 
 @pytest.mark.django_db
+def test_lista_insumos_muestra_formulario_filtra_y_crea_insumo(client, emprendedora):
+    client.force_login(emprendedora)
+    bajo = crear_insumo(nombre="Tela lino", unidad_medida=Insumo.Unidad.METROS, cantidad_disponible=2, stock_minimo=3)
+    crear_insumo(nombre="Hilo blanco", unidad_medida=Insumo.Unidad.CONOS, cantidad_disponible=8, stock_minimo=2)
+    respuesta = client.get(reverse("inventory:insumos"), {"q": "Tela", "estado": "bajo"})
+    assert respuesta.status_code == 200
+    assert b"Registrar material" in respuesta.content
+    assert b"Tela lino" in respuesta.content and b"Hilo blanco" not in respuesta.content
+    assert reverse("inventory:insumo_entrada", args=[bajo.pk]).encode() in respuesta.content
+
+    creada = client.post(reverse("inventory:insumos"), {
+        "nombre": "Cinta nueva", "unidad_medida": Insumo.Unidad.METROS,
+        "cantidad_disponible": "4.00", "stock_minimo": "1.00",
+    })
+    assert creada.status_code == 302
+    assert Insumo.objects.filter(nombre="Cinta nueva").exists()
+
+
+@pytest.mark.django_db
 def test_vista_insumo_edita_sin_cantidad_y_elimina_con_post(client, emprendedora):
     client.force_login(emprendedora)
     insumo = crear_insumo(nombre="Hilo", unidad_medida=Insumo.Unidad.CONOS)
@@ -228,6 +247,33 @@ def test_receta_se_guarda_desde_el_formset(client, emprendedora):
     }
     respuesta = client.post(reverse("inventory:receta", args=[prenda.pk]), datos)
     assert respuesta.status_code == 302
+    assert prenda.receta.get().cantidad_requerida == Decimal("1.25")
+
+
+@pytest.mark.django_db
+def test_producto_sobre_pedido_redirige_y_guarda_receta_en_flujo_completo(client, emprendedora):
+    client.force_login(emprendedora)
+    insumo = crear_insumo(nombre="Lino para vestido", unidad_medida=Insumo.Unidad.METROS)
+    respuesta_creacion = client.post(reverse("catalog:producto_nuevo"), {
+        "nombre": "Vestido sobre pedido", "descripcion": "Confección artesanal",
+        "precio": "45000", "tipo": Producto.Tipo.SOBRE_PEDIDO,
+        "tiempo_produccion_dias": "5", "stock_producto": "0", "stock_minimo": "0",
+        "imagen": imagen("vestido.png"),
+    })
+    prenda = Producto.objects.get(nombre="Vestido sobre pedido")
+    url_receta = reverse("inventory:receta", args=[prenda.pk])
+    assert respuesta_creacion.status_code == 302
+    assert respuesta_creacion.url == url_receta
+    formulario = client.get(url_receta)
+    assert formulario.status_code == 200
+    assert b'name="receta-TOTAL_FORMS"' in formulario.content
+
+    respuesta_receta = client.post(url_receta, {
+        "receta-TOTAL_FORMS": "1", "receta-INITIAL_FORMS": "0",
+        "receta-MIN_NUM_FORMS": "0", "receta-MAX_NUM_FORMS": "1000",
+        "receta-0-insumo": str(insumo.pk), "receta-0-cantidad_requerida": "1.25",
+    })
+    assert respuesta_receta.status_code == 302
     assert prenda.receta.get().cantidad_requerida == Decimal("1.25")
 
 

@@ -1,1 +1,1 @@
-<div class="form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}</div>
+<div class="form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small id="{{ field.auto_id }}_help" class="help-text">{{ field.help_text }}</small>{% endif %}<ul id="{{ field.auto_id }}_errors" class="field-error" role="alert">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul></div>

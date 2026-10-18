@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}TejiendoHogar{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'css/variables.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/accounts.css' %}">
+  <link rel="stylesheet" href="{% static 'css/variables.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/accounts.css' %}"><link rel="stylesheet" href="{% static 'css/legal.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -22,4 +22,6 @@
   {% if messages %}<section class="messages" aria-live="polite">{% for message in messages %}<p class="message {{ message.tags }}">{{ message }}</p>{% endfor %}</section>{% endif %}
   <main id="contenido" tabindex="-1">{% block content %}{% endblock %}</main>
   {% block scripts %}{% endblock %}
+  <dialog class="legal-modal" id="dialogo-legal" aria-label="Información legal"><button class="legal-modal-close secondary-button" type="button" data-legal-close>Cerrar</button><div data-legal-content></div></dialog>
+  <script src="{% static 'js/legal.js' %}" defer></script>
 </body></html>

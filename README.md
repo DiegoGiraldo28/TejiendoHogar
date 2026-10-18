@@ -1,6 +1,6 @@
 # TejiendoHogar
 
-Aplicación monolítica Django con PostgreSQL y plantillas del servidor. La Fase 1 implementa usuarios y autenticación. La Fase 2 implementa gestión de productos, insumos, entradas, recetas y panel para la Emprendedora, además del catálogo público y un resumen provisional de pedido para el Cliente. El pedido no se persiste; carrito, checkout y pago corresponden a la Fase 3.
+Aplicación monolítica Django con PostgreSQL y plantillas del servidor. La Fase 1 implementa usuarios y autenticación. La Fase 2 implementa gestión de productos, insumos, entradas, recetas y panel para la Emprendedora, además del catálogo público y un resumen provisional de pedido para el Cliente. También contiene páginas informativas de términos, privacidad y cookies. El pedido no se persiste; carrito, checkout y pago corresponden a la Fase 3.
 
 ## Requisitos
 
@@ -41,7 +41,7 @@ El comando de datos demo es idempotente y crea seis insumos, ocho productos, rec
 Entra a `backend/` y ejecuta las pruebas y la revisión de configuración desde allí:
 
 ```powershell
-python -m pytest --cov=apps.accounts --cov=apps.catalog --cov=apps.inventory --cov=apps.alerts --cov=apps.orders --cov-report=term-missing --cov-fail-under=80
+python -m pytest --cov=apps.accounts --cov=apps.catalog --cov=apps.inventory --cov=apps.alerts --cov=apps.orders --cov=apps.legal --cov-report=term-missing --cov-fail-under=80
 python manage.py check
 ```
 
@@ -54,3 +54,4 @@ Con los datos demo listos, inicia el servidor con `python backend/manage.py runs
 ## Seguridad y despliegue
 
 No compartas `.env`, claves ni contraseñas. Producción, AWS/S3 y SES permanecen como estructura documentada sin recursos ni credenciales activos.
+Antes de un despliegue real, completa en las páginas legales `[Nombre legal del responsable]`, `[NIT]` y `[Correo de contacto]`, y define cómo se obtiene y conserva la autorización de tratamiento de datos.
