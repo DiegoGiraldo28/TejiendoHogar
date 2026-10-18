@@ -120,3 +120,14 @@ def test_catalogo_tiene_consultas_constantes_y_responde_antes_de_dos_segundos(cl
     assert respuesta.status_code == 200
     assert len(consultas) <= 2
     assert duracion < 2
+    
+@pytest.mark.django_db
+def test_nombre_con_script_se_muestra_escapado(client):
+    crear_producto(
+        nombre="<script>alert(1)</script>", descripcion="Prenda artesanal hecha a mano",
+        precio=Decimal("45000"), imagen=imagen(), tipo=Producto.Tipo.DISPONIBLE,
+        tiempo_produccion_dias=5, stock_producto=4,
+    )
+    contenido = client.get(reverse("catalog:lista")).content
+    assert b"&lt;script&gt;alert(1)&lt;/script&gt;" in contenido
+    assert b"<script>alert(1)</script>" not in contenido

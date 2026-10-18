@@ -9,6 +9,7 @@ from django.urls import reverse
 
 from apps.accounts.forms import LoginForm
 from apps.accounts.services import registrar_cliente
+from django.test import Client
 
 Usuario = get_user_model()
 
@@ -193,3 +194,17 @@ def test_correo_login_se_normaliza(cliente):
     form = LoginForm(data={"correo": "ANA@EXAMPLE.COM", "password": "ClaveFuerte-2026", "perfil": "Cliente"})
     assert form.is_valid()
     assert form.usuario.pk == cliente.pk
+    
+
+@pytest.mark.django_db
+def test_contrasena_se_guarda_con_pbkdf2(cliente):
+    assert cliente.password.startswith("pbkdf2_sha256$")
+
+
+@pytest.mark.django_db
+def test_login_sin_token_csrf_es_rechazado(cliente):
+    navegador = Client(enforce_csrf_checks=True)
+    respuesta = navegador.post(reverse("accounts:login"), {
+        "correo": cliente.correo, "password": "ClaveFuerte-2026", "perfil": "Cliente",
+    })
+    assert respuesta.status_code == 403
