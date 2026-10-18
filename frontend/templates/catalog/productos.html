@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load humanize static %}
+{% block title %}Productos | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}">{% endblock %}
+{% block content %}
+<section class="page-wrap">
+  <header class="page-heading"><div><p class="eyebrow">Taller</p><h1>Gestionar productos del catálogo</h1></div><a class="primary-button button-link" href="{% url 'catalog:producto_nuevo' %}">Nuevo producto</a></header>
+  <form method="get" class="filters" aria-label="Buscar y filtrar productos">
+    <label class="visually-hidden" for="busqueda-producto">Buscar producto</label><input id="busqueda-producto" name="q" value="{{ request.GET.q }}" placeholder="Buscar producto">
+    <label class="visually-hidden" for="filtro-estado">Estado</label><select id="filtro-estado" name="estado"><option value="">Todos los estados</option><option value="activo" {% if request.GET.estado == 'activo' %}selected{% endif %}>Activos</option><option value="inactivo" {% if request.GET.estado == 'inactivo' %}selected{% endif %}>Inactivos</option></select>
+    <label class="visually-hidden" for="filtro-tipo">Tipo</label><select id="filtro-tipo" name="tipo"><option value="">Todos los tipos</option><option value="Disponible" {% if request.GET.tipo == 'Disponible' %}selected{% endif %}>Disponible</option><option value="Sobre_pedido" {% if request.GET.tipo == 'Sobre_pedido' %}selected{% endif %}>Sobre pedido</option></select>
+    <button type="submit" class="secondary-button">Filtrar</button>
+  </form>
+  {% if pagina.object_list %}<div class="product-admin-grid">
+    {% for producto in pagina %}<article class="product-admin-card" data-confirm-container>
+      {% if producto.imagen %}<img class="product-thumb" src="{{ producto.imagen.url }}" alt="Imagen de {{ producto.nombre }}">{% else %}<div class="product-thumb product-placeholder" aria-hidden="true">✧</div>{% endif %}
+      <div class="product-info"><span class="badge {% if producto.activo %}badge-success{% else %}badge-muted{% endif %}">{% if producto.activo %}Activo{% else %}Inactivo{% endif %}</span>
+      {% if producto.tipo == 'Sobre_pedido' %}<span class="badge badge-order">Sobre pedido</span>{% else %}<span class="badge badge-success">Disponible</span>{% endif %}
+      <h2>{{ producto.nombre }}</h2><p>{{ producto.descripcion|truncatechars:90 }}</p><strong>$ {{ producto.precio|floatformat:0|intcomma }}</strong>
+      {% if producto.tipo == 'Disponible' %}<p>{{ producto.stock_producto }} unidades · mínimo {{ producto.stock_minimo }}</p>{% else %}<p>{{ producto.tiempo_produccion_dias }} días de confección</p>{% if not producto.receta_count %}<span class="badge badge-warning">Sin receta</span>{% endif %}{% endif %}
+      <div class="card-actions"><a href="{% url 'catalog:producto_editar' producto.id_producto %}">Editar</a>{% if producto.tipo == 'Sobre_pedido' %}<a href="{% url 'inventory:receta' producto.id_producto %}">Receta</a>{% endif %}
+        <form method="post" action="{% url 'catalog:producto_estado' producto.id_producto %}">{% csrf_token %}<button type="submit" class="text-button">{% if producto.activo %}Desactivar{% else %}Activar{% endif %}</button></form>
+        <a data-fallback-delete href="{% url 'catalog:producto_eliminar' producto.id_producto %}">Eliminar…</a><button type="button" class="text-button" data-open-confirm hidden>Eliminar…</button>
+      </div>
+      <dialog class="confirm-dialog" aria-labelledby="titulo-eliminar-{{ producto.id_producto }}"><form method="post" action="{% url 'catalog:producto_eliminar' producto.id_producto %}">{% csrf_token %}<h2 id="titulo-eliminar-{{ producto.id_producto }}">¿Eliminar {{ producto.nombre }}?</h2><p>Esta acción no se puede deshacer.</p><button type="button" class="secondary-button" data-close-confirm>Cancelar</button><button type="submit" class="danger-button">Eliminar producto</button></form></dialog>
+      </div></article>{% endfor %}
+  </div>{% include "partials/_paginacion.html" with pagina=pagina %}{% else %}<div class="empty-state"><h2>No hay productos con esos filtros</h2><a href="{% url 'catalog:producto_nuevo' %}">Registrar un producto</a></div>{% endif %}
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/confirmar.js' %}" defer></script>{% endblock %}

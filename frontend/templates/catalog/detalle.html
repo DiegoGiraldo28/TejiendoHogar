@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load humanize static %}
+{% block title %}{{ producto.nombre }} | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}">{% endblock %}
+{% block content %}
+<section class="page-wrap product-detail-wrap">
+  <a class="back-link" href="{% url 'catalog:lista' %}">← Volver al catálogo</a>
+  <article class="product-detail-card">
+    <img class="detail-image" src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}">
+    <div class="detail-copy">
+      {% if producto.tipo == 'Sobre_pedido' %}
+        <span class="badge badge-order">Sobre pedido · se confecciona en {{ producto.tiempo_produccion_dias }} días</span>
+      {% elif producto.stock_producto == 0 %}
+        <span class="badge badge-muted">Agotado</span>
+      {% else %}
+        <span class="badge badge-success">Disponible</span>
+      {% endif %}
+      <h1>{{ producto.nombre }}</h1>
+      <p class="customer-price detail-price">$ {{ producto.precio|floatformat:0|intcomma }}</p>
+      <div class="product-description">{{ producto.descripcion|linebreaks }}</div>
+      {% if producto.tipo == 'Disponible' and producto.stock_producto == 0 %}
+        <p class="stock-note" role="status">Este producto está agotado por el momento.</p>
+        {% if user.is_authenticated and user.rol == 'Emprendedora' %}<p>Vista previa para clientes.</p>{% endif %}
+        {% if not user.is_authenticated or user.rol != 'Emprendedora' %}<button class="primary-button" type="button" disabled>Producto agotado</button>{% endif %}
+      {% elif user.is_authenticated and user.rol == 'Emprendedora' %}
+        <p class="stock-note">Vista previa para clientes.</p>
+      {% elif user.is_authenticated and user.rol == 'Cliente' %}
+        <form method="post" action="{% url 'orders:en_proceso' %}" class="order-form">
+          {% csrf_token %}<input type="hidden" name="producto_id" value="{{ producto.id_producto }}">
+          <label for="id_cantidad">Cantidad</label>
+          {% if producto.tipo == 'Disponible' %}<input id="id_cantidad" type="number" name="cantidad" min="1" max="{{ producto.stock_producto }}" value="1" required>
+          {% else %}<input id="id_cantidad" type="number" name="cantidad" min="1" max="10" value="1" required>{% endif %}
+          <button class="primary-button" type="submit">Hacer pedido</button>
+        </form>
+      {% else %}
+        <p class="stock-note">Inicia sesión para continuar con tu pedido.</p>
+        <a class="primary-button button-link" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">Iniciar sesión para hacer pedido</a>
+      {% endif %}
+    </div>
+  </article>
+</section>
+{% endblock %}

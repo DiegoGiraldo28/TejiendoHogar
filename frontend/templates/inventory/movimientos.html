@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Historial de {{ insumo.nombre }} | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/inventory.css' %}">{% endblock %}
+{% block content %}<section class="page-wrap"><header class="page-heading"><div><p class="eyebrow">Trazabilidad</p><h1>Movimientos · {{ insumo.nombre }}</h1><p>Existencia actual: {{ insumo.cantidad_disponible|floatformat:2 }} {{ insumo.get_unidad_medida_display }}</p></div><a class="primary-button button-link" href="{% url 'inventory:insumo_entrada' insumo.id_insumo %}">Registrar entrada</a></header>
+<form method="get" class="filters">{% include "partials/_field.html" with field=form.tipo_movimiento %}<button class="secondary-button" type="submit">Filtrar</button></form>
+<section class="inventory-panel">{% if pagina.object_list %}<div class="table-scroll"><table class="inventory-table"><thead><tr><th scope="col">Fecha</th><th scope="col">Movimiento</th><th scope="col">Cantidad</th></tr></thead><tbody>{% for movimiento in pagina %}<tr><td>{{ movimiento.fecha_movimiento|date:"d/m/Y H:i" }}</td><td>{{ movimiento.get_tipo_movimiento_display }}</td><td>{{ movimiento.cantidad|floatformat:2 }} {{ insumo.get_unidad_medida_display }}</td></tr>{% endfor %}</tbody></table></div>{% include "partials/_paginacion.html" with pagina=pagina %}{% else %}<p class="empty-state">Todavía no hay movimientos para este insumo.</p>{% endif %}</section></section>{% endblock %}

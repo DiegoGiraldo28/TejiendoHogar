@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}Eliminar insumo | TejiendoHogar{% endblock %}
+{% block content %}<section class="content-card"><h1>Eliminar insumo</h1><p>¿Seguro que quieres eliminar «{{ insumo.nombre }}»?</p><p>Solo se puede eliminar si no tiene receta ni movimientos asociados.</p><form method="post">{% csrf_token %}<button class="danger-button" type="submit">Sí, eliminar</button> <a class="secondary-button button-link" href="{% url 'inventory:insumos' %}">Cancelar</a></form></section>{% endblock %}

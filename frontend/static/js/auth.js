@@ -7,5 +7,7 @@ document.querySelectorAll("[data-toggle-password]").forEach((boton) => {
     campo.type = mostrar ? "text" : "password";
     boton.setAttribute("aria-pressed", String(mostrar));
     boton.setAttribute("aria-label", mostrar ? "Ocultar contraseña" : "Mostrar contraseña");
+    boton.querySelector("[data-eye-open]").classList.toggle("is-hidden", !mostrar);
+    boton.querySelector("[data-eye-closed]").classList.toggle("is-hidden", mostrar);
   });
 });

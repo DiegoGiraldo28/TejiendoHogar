@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Materia prima e insumos | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/inventory.css' %}?v=insumos-layout-2">{% endblock %}
+{% block content %}
+<section class="page-wrap">
+  <header class="insumos-heading"><h1>Materia prima e insumos</h1></header>
+  <div class="inventory-layout">
+  <section class="inventory-panel"><div class="section-heading"><h2>Disponibilidad de materiales</h2><span>{{ pagina.paginator.count }} registros</span></div>
+  <form method="get" class="inventory-filters"><label class="visually-hidden" for="buscar-insumo">Buscar insumo</label><input id="buscar-insumo" name="q" value="{{ busqueda }}" placeholder="Buscar insumo…"><label class="visually-hidden" for="filtro-estado">Filtrar estado</label><select id="filtro-estado" name="estado"><option value="">Todos los estados</option><option value="bajo" {% if estado_seleccionado == 'bajo' %}selected{% endif %}>Bajo stock</option><option value="disponible" {% if estado_seleccionado == 'disponible' %}selected{% endif %}>Disponible</option></select><button class="secondary-button" type="submit">Filtrar</button></form>
+  {% if pagina.object_list %}<div class="table-scroll"><table class="inventory-table"><thead><tr><th scope="col">Insumo</th><th scope="col">Cantidad</th><th scope="col">Unidad</th><th scope="col">Stock mín.</th><th scope="col">Estado</th><th scope="col">Acción</th></tr></thead><tbody>
+    {% for insumo in pagina %}<tr><th scope="row">{{ insumo.nombre }}</th><td><strong>{{ insumo.cantidad_disponible|floatformat:"-2" }}</strong></td><td>{{ insumo.get_unidad_medida_display|lower }}</td><td>{{ insumo.stock_minimo|floatformat:"-2" }}</td><td>{% if insumo.en_stock_bajo %}<span class="badge badge-warning">Bajo stock</span>{% else %}<span class="badge badge-success">Disponible</span>{% endif %}</td><td class="table-actions" data-confirm-container><a class="secondary-button button-link" href="{% url 'inventory:insumo_entrada' insumo.id_insumo %}">Actualizar</a><a href="{% url 'inventory:insumo_movimientos' insumo.id_insumo %}">Historial</a><a href="{% url 'inventory:insumo_editar' insumo.id_insumo %}">Editar datos</a><a data-fallback-delete href="{% url 'inventory:insumo_eliminar' insumo.id_insumo %}">Eliminar…</a><button type="button" class="text-button" data-open-confirm hidden>Eliminar…</button><dialog class="confirm-dialog" aria-labelledby="titulo-eliminar-insumo-{{ insumo.id_insumo }}"><form method="post" action="{% url 'inventory:insumo_eliminar' insumo.id_insumo %}">{% csrf_token %}<h2 id="titulo-eliminar-insumo-{{ insumo.id_insumo }}">¿Eliminar {{ insumo.nombre }}?</h2><p>Solo se puede eliminar si no tiene receta ni movimientos asociados.</p><button type="button" class="secondary-button" data-close-confirm>Cancelar</button><button type="submit" class="danger-button">Eliminar insumo</button></form></dialog></td></tr>{% endfor %}
+  </tbody></table></div>{% include "partials/_paginacion.html" with pagina=pagina %}{% else %}<p class="empty-state">No hay insumos registrados. <a href="{% url 'inventory:insumo_nuevo' %}">Agrega el primero.</a></p>{% endif %}
+  </section>
+  <aside class="inventory-panel material-form-panel"><h2>Registrar material</h2><p class="help-text">Ajusta existencias o añade un nuevo insumo.</p><form method="post" class="data-form">{% csrf_token %}{% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}{% for field in form %}{% include "partials/_field.html" with field=field %}{% endfor %}<button class="primary-button" type="submit">Guardar en inventario</button></form></aside>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/confirmar.js' %}" defer></script>{% endblock %}
