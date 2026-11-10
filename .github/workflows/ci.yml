@@ -30,5 +30,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install -r backend/requirements/dev.txt
+      - run: pycodestyle apps config
+        working-directory: backend
       - run: pytest --cov=apps.accounts --cov=apps.catalog --cov=apps.inventory --cov=apps.alerts --cov=apps.orders --cov=apps.legal --cov-report=term-missing --cov-fail-under=80
         working-directory: backend

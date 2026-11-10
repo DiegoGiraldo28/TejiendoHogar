@@ -4,8 +4,6 @@ from decimal import Decimal
 import pytest
 from unittest.mock import patch
 from django.core.exceptions import ValidationError
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.http import Http404
 from django.db.models.deletion import ProtectedError
 from django.urls import reverse
 
@@ -16,21 +14,10 @@ from apps.catalog.services import (
 )
 from apps.inventory.models import Insumo, ProductoInsumo
 
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+from conftest import (crear_producto_prueba as crear, imagen_cabecera_prueba,
+                      imagen_png_prueba as imagen)
 
-
-def imagen(nombre="prenda.png", contenido=PNG):
-    return SimpleUploadedFile(nombre, contenido, content_type="image/png")
-
-
-def crear(*, tipo=Producto.Tipo.DISPONIBLE, **cambios):
-    datos = {
-        "nombre": "Blusa artesanal", "descripcion": "Hecha a mano",
-        "precio": Decimal("45000"), "imagen": imagen(), "tipo": tipo,
-        "tiempo_produccion_dias": 5, "stock_producto": 4, "stock_minimo": 1,
-    }
-    datos.update(cambios)
-    return crear_producto(**datos)
+PNG = imagen().read()
 
 
 @pytest.mark.django_db
@@ -42,7 +29,9 @@ def test_crear_disponible_activo_y_sobre_pedido_inactivo():
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("campo,valor", [("precio", -1), ("tiempo_produccion_dias", 0), ("stock_producto", -1), ("stock_minimo", -1)])
+@pytest.mark.parametrize("campo,valor", [
+    ("precio", -1), ("tiempo_produccion_dias", 0), ("stock_producto", -1), ("stock_minimo", -1),
+])
 def test_check_producto_rechaza_valores_invalidos(campo, valor):
     producto = crear()
     setattr(producto, campo, valor)
@@ -67,6 +56,23 @@ def test_producto_rechaza_extension_o_firma_invalida(nombre, contenido):
 def test_producto_rechaza_imagen_mayor_a_dos_mb():
     with pytest.raises(ValidationError):
         crear(imagen=imagen(contenido=PNG + b"x" * (2 * 1024 * 1024)))
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(("formato", "variante"), [
+    ("png", ""), ("jpg", "sof0"), ("jpg", "sof2"),
+    ("webp", "vp8"), ("webp", "vp8l"), ("webp", "vp8x"),
+])
+def test_imagen_de_200_por_200_se_acepta_en_todos_los_formatos(formato, variante):
+    producto = crear(imagen=imagen_cabecera_prueba(formato, variante=variante))
+    assert producto.pk
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("formato", ["png", "jpg", "webp"])
+def test_imagen_menor_a_200_por_200_se_rechaza(formato):
+    with pytest.raises(ValidationError, match="200 × 200"):
+        crear(imagen=imagen_cabecera_prueba(formato, ancho=199, alto=200))
 
 
 @pytest.mark.django_db
@@ -108,15 +114,15 @@ def test_actualizar_producto_conserva_imagen_si_no_se_reemplaza():
 
 
 @pytest.mark.django_db
-def test_listado_publico_filtra_activos_busqueda_tipo_y_pagina():
+def test_listado_publico_filtra_activos_busqueda_y_tipo():
     crear(nombre="Blusa uno")
     crear(nombre="Blusa dos")
     inactivo = crear(nombre="Inactivo")
     inactivo.activo = False
     inactivo.save()
-    pagina = listar_publicos(busqueda="blusa", tipo=Producto.Tipo.DISPONIBLE).get_page(1)
-    assert pagina.paginator.count == 2
-    assert all(p.activo for p in pagina.object_list)
+    productos = listar_publicos(busqueda="blusa", tipo=Producto.Tipo.DISPONIBLE)
+    assert productos.count() == 2
+    assert all(p.activo for p in productos)
 
 
 @pytest.mark.django_db
@@ -125,12 +131,14 @@ def test_obtener_publico_oculta_inactivo():
     assert obtener_publico(id_producto=producto.pk).pk == producto.pk
     producto.activo = False
     producto.save()
-    with pytest.raises(Http404):
-        obtener_publico(id_producto=producto.pk)
+    assert obtener_publico(id_producto=producto.pk) is None
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("ruta", ["catalog:productos", "catalog:producto_nuevo", "inventory:insumos", "inventory:insumo_nuevo", "alerts:panel"])
+@pytest.mark.parametrize("ruta", [
+    "catalog:productos", "catalog:producto_nuevo", "inventory:insumos", "inventory:insumo_nuevo",
+    "alerts:panel",
+])
 def test_rutas_gestion_protegen_por_rol(client, ruta, cliente, emprendedora):
     url = reverse(ruta)
     client.logout()
@@ -172,3 +180,15 @@ def test_formulario_producto_rechaza_imagen_invalida(client, emprendedora):
     respuesta = client.post(reverse("catalog:producto_nuevo"), datos)
     assert respuesta.status_code == 200
     assert "contenido del archivo" in respuesta.content.decode()
+
+
+@pytest.mark.django_db
+def test_formulario_producto_muestra_error_espanol_para_cero_dias(client, emprendedora):
+    client.force_login(emprendedora)
+    respuesta = client.post(reverse("catalog:producto_nuevo"), {
+        "nombre": "Blusa", "descripcion": "Tejida", "precio": "100",
+        "tipo": Producto.Tipo.DISPONIBLE, "tiempo_produccion_dias": "0",
+        "stock_producto": "0", "stock_minimo": "0", "imagen": imagen(),
+    })
+    assert respuesta.status_code == 200
+    assert "Los d\u00edas de producci\u00f3n deben ser al menos 1".encode() in respuesta.content

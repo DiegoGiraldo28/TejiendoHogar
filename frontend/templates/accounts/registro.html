@@ -1,10 +1,13 @@
-{% extends "accounts/auth_base.html" %}{% block title %}Crear cuenta | TejiendoHogar{% endblock %}{% block auth_content %}
+{% extends "accounts/auth_base.html" %}{% load static %}{% block title %}Crear cuenta | TejiendoHogar{% endblock %}{% block auth_content %}
 <h2 class="registration-title">Crea tu cuenta</h2><p class="registration-subtitle">Únete a la comunidad de TejiendoHogar</p>
-<form method="post" class="auth-form">{% csrf_token %}{% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}{% include "accounts/_perfil_selector.html" %}
-{% include "accounts/_field.html" with field=form.nombre %}
-{% include "accounts/_field.html" with field=form.correo %}
-{% include "accounts/_field.html" with field=form.telefono %}
-<div class="password-control">{% include "accounts/_field.html" with field=form.password %}<button class="password-toggle" type="button" data-toggle-password data-password-target="{{ form.password.id_for_label }}" aria-label="Mostrar contraseña" aria-pressed="false">{% include "accounts/_eye_icon.html" %}</button></div>
-<div class="password-control">{% include "accounts/_field.html" with field=form.confirmar_password %}<button class="password-toggle" type="button" data-toggle-password data-password-target="{{ form.confirmar_password.id_for_label }}" aria-label="Mostrar contraseña" aria-pressed="false">{% include "accounts/_eye_icon.html" %}</button></div>
+<form method="post" class="auth-form">{% csrf_token %}{% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+{% include "partials/_field.html" with field=form.nombre %}
+{% include "partials/_field.html" with field=form.correo %}
+{% include "partials/_field.html" with field=form.telefono %}
+{% include "partials/_field.html" with field=form.direccion %}
+<div class="password-control">{% include "partials/_field.html" with field=form.password %}<button class="password-toggle" type="button" data-toggle-password data-password-target="{{ form.password.id_for_label }}" aria-label="Mostrar contraseña" aria-pressed="false">{% include "accounts/_eye_icon.html" %}</button></div>
+<div class="password-control">{% include "partials/_field.html" with field=form.confirmar_password %}<button class="password-toggle" type="button" data-toggle-password data-password-target="{{ form.confirmar_password.id_for_label }}" aria-label="Mostrar contraseña" aria-pressed="false">{% include "accounts/_eye_icon.html" %}</button></div>
+<p class="help-text" data-password-match aria-live="polite"></p>
 <button class="primary-button" type="submit">Crear mi cuenta</button><p class="legal-disclaimer">Al crear tu cuenta, aceptas nuestros <a href="{% url 'legal:terminos' %}" data-legal-modal>Términos y condiciones</a> y nuestra <a href="{% url 'legal:privacidad' %}" data-legal-modal>Política de Privacidad</a>.</p><p class="auth-switch">¿Ya tienes cuenta? <a href="{% url 'accounts:login' %}">Inicia sesión aquí</a></p><p class="auth-switch">¿Eres una artesana o emprendedora? <a href="{% url 'accounts:login' %}">Acceso a taller</a></p></form>{% endblock %}
 {% block auth_footer %}♧ &nbsp; COMERCIO JUSTO • COMPRA 100% PROTEGIDA{% endblock %}
+{% block scripts %}<script src="{% static 'js/auth.js' %}" defer></script><script src="{% static 'js/validacion.js' %}" defer></script>{% endblock %}

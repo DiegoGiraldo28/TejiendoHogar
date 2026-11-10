@@ -1,9 +1,14 @@
 """Modelo de usuario mapeado a la tabla definida por el esquema."""
-import re
-
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.core.exceptions import ValidationError
 from django.db import models
+from apps.common.validators import validar_telefono
+
+
+class Rol(models.TextChoices):
+    EMPRENDEDORA = "Emprendedora", "Emprendedora"
+    CLIENTE = "Cliente", "Cliente"
+    OPERARIA = "Operaria", "Operaria"
 
 
 class UsuarioManager(BaseUserManager):
@@ -28,10 +33,7 @@ class UsuarioManager(BaseUserManager):
 class Usuario(AbstractBaseUser):
     """Cuenta de acceso para Cliente, Emprendedora u Operaria."""
 
-    class Rol(models.TextChoices):
-        EMPRENDEDORA = "Emprendedora", "Emprendedora"
-        CLIENTE = "Cliente", "Cliente"
-        OPERARIA = "Operaria", "Operaria"
+    Rol = Rol
 
     id_usuario = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=150)
@@ -52,22 +54,44 @@ class Usuario(AbstractBaseUser):
 
     class Meta:
         db_table = "usuario"
-        indexes = [models.Index(fields=["rol"], name="idx_usuario_rol"), models.Index(fields=["is_active"], name="idx_usuario_activo")]
+        indexes = [
+            models.Index(fields=["rol"], name="idx_usuario_rol"),
+            models.Index(fields=["is_active"], name="idx_usuario_activo"),
+        ]
         constraints = [
             models.UniqueConstraint(fields=["correo"], name="uq_usuario_correo"),
-            models.CheckConstraint(condition=models.Q(rol__in=["Emprendedora", "Cliente", "Operaria"]), name="ck_usuario_rol"),
-            models.CheckConstraint(condition=models.Q(telefono__isnull=True) | models.Q(telefono__regex=r"^[0-9+ ()-]{7,20}$"), name="ck_usuario_telefono"),
-            models.CheckConstraint(condition=models.Q(direccion__isnull=True) | ~models.Q(direccion=""), name="ck_usuario_direccion"),
+            models.CheckConstraint(condition=models.Q(rol__in=Rol.values), name="ck_usuario_rol",
+                                   violation_error_message="Selecciona un rol válido."),
+            models.CheckConstraint(
+                condition=models.Q(telefono__isnull=True) | models.Q(telefono__regex=r"^[0-9+ ()-]{7,20}$"),
+                name="ck_usuario_telefono", violation_error_message="Ingresa un teléfono válido.",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(direccion__isnull=True) | ~models.Q(direccion=""),
+                name="ck_usuario_direccion", violation_error_message="La dirección no puede estar vacía.",
+            ),
         ]
 
     def clean(self):
         super().clean()
         if self.correo:
             self.correo = self.correo.strip().lower()
-        if self.telefono and not re.fullmatch(r"[0-9+ ()-]{7,20}", self.telefono):
-            raise ValidationError({"telefono": "Ingresa un teléfono válido (7 a 20 caracteres)."})
+        validar_telefono(self.telefono or "")
         if self.direccion == "":
             raise ValidationError({"direccion": "La dirección no puede estar vacía."})
 
     def __str__(self):
         return self.correo
+
+
+class IntentoAcceso(models.Model):
+    """Intento de inicio de sesión para auditoría y limitación por correo."""
+
+    correo = models.EmailField(max_length=150)
+    fecha = models.DateTimeField(auto_now_add=True)
+    exitoso = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "intento_acceso"
+        ordering = ["-fecha"]
+        indexes = [models.Index(fields=["correo", "exitoso", "fecha"], name="idx_intento_correo_fecha")]

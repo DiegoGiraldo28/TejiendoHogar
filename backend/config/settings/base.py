@@ -3,17 +3,19 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from apps.common.constants import LIMITE_IMAGEN_BYTES
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "clave-insegura-solo-para-pruebas")
+SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = False
 ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "localhost").split(",") if host.strip()]
 
 INSTALLED_APPS = [
     "django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions",
     "django.contrib.messages", "django.contrib.staticfiles", "django.contrib.humanize",
+    "django.contrib.postgres",
     "apps.accounts.apps.AccountsConfig", "apps.catalog.apps.CatalogConfig",
     "apps.inventory.apps.InventoryConfig", "apps.alerts.apps.AlertsConfig",
     "apps.orders.apps.OrdersConfig", "apps.legal.apps.LegalConfig",
@@ -42,7 +44,8 @@ DATABASES = {"default": {
 }}
 AUTH_USER_MODEL = "accounts.Usuario"
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+     "OPTIONS": {"user_attributes": ("nombre", "correo")}},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -57,7 +60,7 @@ STATICFILES_DIRS = [BASE_DIR / "frontend" / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = LIMITE_IMAGEN_BYTES
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTHENTICATION_BACKENDS = ["apps.accounts.backends.CorreoBackend"]
 LOGIN_URL = "accounts:login"

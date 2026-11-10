@@ -1,11 +1,13 @@
 """Operaciones transaccionales y cálculos de inventario."""
 import logging
 from decimal import Decimal, InvalidOperation
+from typing import Any, Iterable
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.db.models.deletion import ProtectedError
+from django.db.models import QuerySet
 
 from apps.catalog.models import Producto
 from .models import Insumo, MovimientoInsumo, ProductoInsumo
@@ -13,7 +15,7 @@ from .models import Insumo, MovimientoInsumo, ProductoInsumo
 logger = logging.getLogger(__name__)
 
 
-def _cantidad_decimal(valor, campo="cantidad"):
+def _cantidad_decimal(valor: Any, campo: str = "cantidad") -> Decimal:
     """Convierte una cantidad positiva a Decimal para guardarla con precisión."""
     try:
         cantidad = Decimal(str(valor))
@@ -24,7 +26,8 @@ def _cantidad_decimal(valor, campo="cantidad"):
     return cantidad
 
 
-def crear_insumo(*, nombre, unidad_medida, cantidad_disponible=0, stock_minimo=0):
+def crear_insumo(*, nombre: str, unidad_medida: str, cantidad_disponible: Any = 0,
+                 stock_minimo: Any = 0) -> Insumo:
     """Crea un insumo y registra su cantidad inicial como Entrada.
 
     Devuelve Insumo; lanza ValidationError por duplicados o datos inválidos.
@@ -55,7 +58,7 @@ def crear_insumo(*, nombre, unidad_medida, cantidad_disponible=0, stock_minimo=0
     return insumo
 
 
-def registrar_entrada(*, insumo_id, cantidad):
+def registrar_entrada(*, insumo_id: int, cantidad: Any) -> MovimientoInsumo:
     """Suma una entrada bajo bloqueo y registra el movimiento atómicamente.
 
     Recibe ID y cantidad positiva; devuelve MovimientoInsumo o lanza ValidationError.
@@ -80,7 +83,7 @@ def registrar_entrada(*, insumo_id, cantidad):
     return movimiento
 
 
-def actualizar_insumo(*, insumo, nombre, unidad_medida, stock_minimo):
+def actualizar_insumo(*, insumo: Insumo, nombre: str, unidad_medida: str, stock_minimo: Any) -> Insumo:
     """Actualiza datos descriptivos sin cambiar existencias."""
     nombre = nombre.strip()
     if Insumo.objects.filter(nombre__iexact=nombre).exclude(pk=insumo.pk).exists():
@@ -95,7 +98,7 @@ def actualizar_insumo(*, insumo, nombre, unidad_medida, stock_minimo):
     return insumo
 
 
-def eliminar_insumo(*, insumo):
+def eliminar_insumo(*, insumo: Insumo) -> None:
     """Elimina un insumo sin receta ni movimientos previos."""
     if ProductoInsumo.objects.filter(insumo=insumo).exists() or MovimientoInsumo.objects.filter(insumo=insumo).exists():
         logger.warning("Se rechazó eliminar el insumo %s porque está en uso.", insumo.pk)
@@ -108,7 +111,7 @@ def eliminar_insumo(*, insumo):
     logger.info("Se eliminó el insumo %s.", insumo.pk)
 
 
-def guardar_receta(*, producto, lineas):
+def guardar_receta(*, producto: Producto, lineas: Iterable[dict[str, Any]]) -> list[ProductoInsumo]:
     """Reemplaza una receta completa dentro de una transacción.
 
     Recibe filas con `insumo` y `cantidad_requerida`; devuelve las líneas guardadas
@@ -152,19 +155,19 @@ def guardar_receta(*, producto, lineas):
     return guardadas
 
 
-def insumos_en_stock_bajo():
+def insumos_en_stock_bajo() -> QuerySet[Insumo]:
     """Devuelve insumos en el mínimo o por debajo."""
     return Insumo.objects.filter(cantidad_disponible__lte=F("stock_minimo")).order_by("nombre")
 
 
-def productos_en_stock_bajo():
+def productos_en_stock_bajo() -> QuerySet[Producto]:
     """Devuelve productos Disponibles activos en el mínimo o por debajo."""
     return Producto.objects.filter(
         activo=True, tipo=Producto.Tipo.DISPONIBLE, stock_producto__lte=F("stock_minimo")
     ).order_by("nombre")
 
 
-def calcular_requerimiento(*, producto, cantidad):
+def calcular_requerimiento(*, producto: Producto, cantidad: Any) -> dict[Insumo, Decimal]:
     """Calcula la cantidad exacta de cada insumo para unidades solicitadas."""
     cantidad = _cantidad_decimal(cantidad, "cantidad")
     return {
@@ -173,7 +176,7 @@ def calcular_requerimiento(*, producto, cantidad):
     }
 
 
-def validar_disponibilidad(*, producto, cantidad):
+def validar_disponibilidad(*, producto: Producto, cantidad: Any) -> tuple[bool, dict[Any, Decimal]]:
     """Compara la cantidad solicitada con stock o con insumos de la receta."""
     cantidad = _cantidad_decimal(cantidad, "cantidad")
     if producto.tipo == Producto.Tipo.DISPONIBLE:
@@ -189,7 +192,7 @@ def validar_disponibilidad(*, producto, cantidad):
     return bool(requerimientos) and not faltantes, faltantes
 
 
-def unidades_fabricables(*, producto):
+def unidades_fabricables(*, producto: Producto) -> int:
     """Calcula el máximo de unidades completas que permite la receta actual."""
     lineas = ProductoInsumo.objects.filter(producto=producto).select_related("insumo")
     if not lineas.exists():

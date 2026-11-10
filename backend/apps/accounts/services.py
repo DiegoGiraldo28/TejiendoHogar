@@ -1,13 +1,14 @@
 """Reglas de negocio para las cuentas."""
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 from django.db import IntegrityError, transaction
 
-Usuario = get_user_model()
+from .models import Usuario
 
 
-def registrar_cliente(*, nombre, correo, password, telefono="", direccion=""):
+def registrar_cliente(
+    *, nombre: str, correo: str, password: str, telefono: str = "", direccion: str = "",
+) -> Usuario:
     """Crea un Cliente.
 
     Recibe los datos validados del formulario; devuelve Usuario o lanza
@@ -31,7 +32,8 @@ def registrar_cliente(*, nombre, correo, password, telefono="", direccion=""):
     return usuario
 
 
-def actualizar_perfil(*, usuario, nombre, telefono="", direccion=""):
+def actualizar_perfil(*, usuario: Usuario, nombre: str, telefono: str = "",
+                      direccion: str = "") -> Usuario:
     """Actualiza nombre, teléfono y dirección; conserva el correo sin cambios."""
     usuario.nombre = nombre.strip()
     usuario.telefono = telefono.strip() or None

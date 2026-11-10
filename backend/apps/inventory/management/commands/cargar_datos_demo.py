@@ -1,5 +1,6 @@
 """Carga un conjunto pequeño e idempotente para recorrer las pantallas."""
-import base64
+import struct
+import zlib
 
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
@@ -11,10 +12,19 @@ from apps.inventory.models import Insumo
 from apps.inventory.services import crear_insumo, guardar_receta
 
 
-# PNG transparente 1x1 generado como bytes; no depende de Pillow.
-PNG_DEMO = base64.b64decode(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jZ3sAAAAASUVORK5CYII="
-)
+def crear_png_demo(ancho=200, alto=200):
+    """Genera un PNG transparente de demostración sin depender de Pillow."""
+    def bloque(tipo, contenido):
+        return (struct.pack(">I", len(contenido)) + tipo + contenido
+                + struct.pack(">I", zlib.crc32(tipo + contenido) & 0xFFFFFFFF))
+
+    cabecera = struct.pack(">IIBBBBB", ancho, alto, 8, 6, 0, 0, 0)
+    filas = b"".join(b"\x00" + bytes(ancho * 4) for _ in range(alto))
+    return (b"\x89PNG\r\n\x1a\n" + bloque(b"IHDR", cabecera)
+            + bloque(b"IDAT", zlib.compress(filas)) + bloque(b"IEND", b""))
+
+
+PNG_DEMO = crear_png_demo()
 
 INSUMOS = [
     ("Tela lino crudo", "metros", "1", "10"),

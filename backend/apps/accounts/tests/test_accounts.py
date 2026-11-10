@@ -6,8 +6,11 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core import mail
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
 
 from apps.accounts.forms import LoginForm
+from apps.accounts.models import IntentoAcceso
 from apps.accounts.services import registrar_cliente
 from django.test import Client
 
@@ -15,7 +18,10 @@ Usuario = get_user_model()
 
 
 def registro_data(**cambios):
-    datos = {"nombre": "Luz Tejidos", "correo": "luz@example.com", "password": "ClaveFuerte-2026", "confirmar_password": "ClaveFuerte-2026", "telefono": "300 123 4567", "direccion": "Calle 10", "perfil": "Cliente"}
+    datos = {
+        "nombre": "Luz Tejidos", "correo": "luz@example.com", "password": "ClaveFuerte-2026",
+        "confirmar_password": "ClaveFuerte-2026", "telefono": "300 123 4567", "direccion": "Calle 10",
+    }
     return {**datos, **cambios}
 
 
@@ -37,7 +43,8 @@ def test_create_superuser_es_emprendedora():
 
 @pytest.mark.django_db
 def test_servicio_registra_solo_cliente():
-    usuario = registrar_cliente(**{k: registro_data()[k] for k in ("nombre", "correo", "password", "telefono", "direccion")})
+    campos = ("nombre", "correo", "password", "telefono", "direccion")
+    usuario = registrar_cliente(**{campo: registro_data()[campo] for campo in campos})
     assert usuario.rol == "Cliente" and usuario.check_password("ClaveFuerte-2026")
     assert usuario.telefono == "300 123 4567"
 
@@ -58,11 +65,13 @@ def test_servicio_rechaza_telefono_invalido():
 def test_registro_crea_cliente_y_redirige(client):
     respuesta = client.post(reverse("accounts:registro"), registro_data())
     assert respuesta.status_code == 302 and respuesta.url == reverse("accounts:login")
-    assert Usuario.objects.get(correo="luz@example.com").rol == "Cliente"
+    usuario = Usuario.objects.get(correo="luz@example.com")
+    assert usuario.rol == "Cliente"
+    assert usuario.direccion == "Calle 10"
 
 
 @pytest.mark.django_db
-def test_registro_muestra_orden_ayuda_legal_y_telefono_visible(client):
+def test_registro_muestra_ayudas_y_atributos_de_validacion(client):
     respuesta = client.get(reverse("accounts:registro"))
     contenido = respuesta.content.decode()
     posiciones = [contenido.index(f'name="{nombre}"') for nombre in (
@@ -70,25 +79,48 @@ def test_registro_muestra_orden_ayuda_legal_y_telefono_visible(client):
     )]
 
     assert posiciones == sorted(posiciones)
-    assert 'type="tel"' in contenido
-    assert "Mínimo 8 caracteres, combinando letras y números" in contenido
+    assert 'inputmode="tel"' in contenido
+    assert 'minlength="7"' in contenido and 'maxlength="20"' in contenido
+    assert 'pattern="[0-9+ ()-]{7,20}"' in contenido
+    assert "Entre 7 y 20 caracteres: números, espacios, +, - o paréntesis" in contenido
+    assert "Mínimo 8 caracteres, no solo números y no parecida a tu nombre o correo" in contenido
     assert "Términos y condiciones" in contenido and "Política de Privacidad" in contenido
     assert "100% PROTEGIDA" in contenido
 
 
 @pytest.mark.django_db
 def test_registro_muestra_errores_de_datos(client, cliente):
-    respuesta = client.post(reverse("accounts:registro"), registro_data(correo="ANA@example.com", password="uno", confirmar_password="dos"))
+    respuesta = client.post(reverse("accounts:registro"), registro_data(
+        correo="ANA@example.com", password="uno", confirmar_password="dos",
+    ))
     assert respuesta.status_code == 200
     assert "Ya existe una cuenta" in respuesta.content.decode()
     assert "Las contraseñas no coinciden" in respuesta.content.decode()
 
 
 @pytest.mark.django_db
-def test_registro_emprendedora_se_rechaza_sin_crear(client):
+def test_registro_no_muestra_selector_y_crea_cliente(client):
+    from apps.accounts.forms import RegistroForm
+
+    assert "perfil" not in RegistroForm().fields
+    respuesta = client.post(reverse("accounts:registro"), registro_data())
+    assert respuesta.status_code == 302
+    assert Usuario.objects.get(correo="luz@example.com").rol == Usuario.Rol.CLIENTE
+
+
+@pytest.mark.django_db
+def test_registro_ignora_perfil_enviado_por_post(client):
     respuesta = client.post(reverse("accounts:registro"), registro_data(perfil="Emprendedora"))
-    assert "Las cuentas de Emprendedora las crea" in respuesta.content.decode()
-    assert Usuario.objects.count() == 0
+    assert respuesta.status_code == 302
+    assert Usuario.objects.get(correo="luz@example.com").rol == Usuario.Rol.CLIENTE
+
+
+@pytest.mark.django_db
+def test_registro_rechaza_telefono_invalido_enviado_por_post(client):
+    respuesta = client.post(reverse("accounts:registro"), registro_data(
+        correo="telefono@example.com", telefono="123abc4"))
+    assert respuesta.status_code == 200
+    assert "Ingresa un teléfono válido" in respuesta.content.decode()
 
 
 @pytest.mark.parametrize("password", ["soloLetras", "12345678"])
@@ -104,24 +136,79 @@ def test_registro_exige_letras_y_numeros(client, password):
 
 @pytest.mark.django_db
 def test_login_coincidente_y_redireccion_por_rol(client, cliente, emprendedora):
-    respuesta_cliente = client.post(reverse("accounts:login"), {"correo": cliente.correo, "password": "ClaveFuerte-2026", "perfil": "Cliente"})
+    respuesta_cliente = client.post(reverse("accounts:login"), {
+        "correo": cliente.correo, "password": "ClaveFuerte-2026",
+    })
     assert respuesta_cliente.url == reverse("catalog:lista")
     client.logout()
-    respuesta_taller = client.post(reverse("accounts:login"), {"correo": emprendedora.correo, "password": "ClaveFuerte-2026", "perfil": "Emprendedora"})
+    respuesta_taller = client.post(reverse("accounts:login"), {
+        "correo": emprendedora.correo, "password": "ClaveFuerte-2026",
+    })
     assert respuesta_taller.url == reverse("alerts:panel")
 
 
 @pytest.mark.django_db
 def test_login_credenciales_incorrectas_mensaje_generico(client, cliente):
-    respuesta = client.post(reverse("accounts:login"), {"correo": cliente.correo, "password": "mala", "perfil": "Cliente"})
+    respuesta = client.post(reverse("accounts:login"), {"correo": cliente.correo, "password": "mala"})
     assert "Correo o contraseña incorrectos" in respuesta.content.decode()
 
 
 @pytest.mark.django_db
-def test_selector_no_coincidente_no_autentica(client, cliente):
-    respuesta = client.post(reverse("accounts:login"), {"correo": cliente.correo, "password": "ClaveFuerte-2026", "perfil": "Emprendedora"})
-    assert "Esta cuenta no es de tipo Emprendedora" in respuesta.content.decode()
+def test_rol_sin_acceso_web_usa_mensaje_generico_y_no_autentica(client, db):
+    usuario = Usuario.objects.create_user(
+        "operaria@example.com", "ClaveFuerte-2026", nombre="Operaria", rol=Usuario.Rol.OPERARIA,
+    )
+    respuesta = client.post(reverse("accounts:login"), {"correo": usuario.correo, "password": "ClaveFuerte-2026"})
+    assert "Correo o contraseña incorrectos." in respuesta.content.decode()
     assert "_auth_user_id" not in client.session
+    assert not IntentoAcceso.objects.get(correo=usuario.correo).exitoso
+
+
+@pytest.mark.django_db
+def test_login_bloquea_al_quinto_fallo_y_el_bloqueo_expira(client):
+    for _ in range(5):
+        respuesta = client.post(reverse("accounts:login"), {
+            "correo": "fallos@example.com", "password": "incorrecta",
+        })
+        assert "Correo o contraseña incorrectos." in respuesta.content.decode()
+    assert IntentoAcceso.objects.filter(correo="fallos@example.com", exitoso=False).count() == 5
+
+    bloqueada = client.post(reverse("accounts:login"), {
+        "correo": "fallos@example.com", "password": "incorrecta",
+    })
+    assert "Demasiados intentos. Intenta de nuevo en 15 minutos." in bloqueada.content.decode()
+
+    IntentoAcceso.objects.filter(correo="fallos@example.com").update(
+        fecha=timezone.now() - timedelta(minutes=16))
+    expirada = client.post(reverse("accounts:login"), {
+        "correo": "fallos@example.com", "password": "incorrecta",
+    })
+    assert "Correo o contraseña incorrectos." in expirada.content.decode()
+
+
+@pytest.mark.django_db
+def test_login_exitoso_reinicia_el_conteo_de_intentos(client, cliente):
+    for _ in range(4):
+        client.post(reverse("accounts:login"), {"correo": cliente.correo, "password": "incorrecta"})
+    correcto = client.post(reverse("accounts:login"), {
+        "correo": cliente.correo, "password": "ClaveFuerte-2026",
+    })
+    assert correcto.url == reverse("catalog:lista")
+    assert IntentoAcceso.objects.filter(correo=cliente.correo, exitoso=False).count() == 0
+    assert IntentoAcceso.objects.filter(correo=cliente.correo, exitoso=True).count() == 1
+    client.logout()
+    client.post(reverse("accounts:login"), {"correo": cliente.correo, "password": "incorrecta"})
+    assert IntentoAcceso.objects.filter(correo=cliente.correo, exitoso=False).count() == 1
+
+
+@pytest.mark.parametrize("nombre,correo,password", [
+    ("Luz Tejidos", "luz@example.com", "luz@example.com"),
+    ("Luz Tejidos", "luz@example.com", "LuzTejidos2026"),
+])
+@pytest.mark.django_db
+def test_registro_rechaza_contrasena_similar_a_nombre_o_correo(nombre, correo, password):
+    with pytest.raises(ValidationError):
+        registrar_cliente(nombre=nombre, correo=correo, password=password)
 
 
 @pytest.mark.django_db
@@ -148,7 +235,9 @@ def test_recuperacion_no_revela_y_envia_correo(client, cliente):
     respuesta_enlace = client.get(token_url, follow=True)
     assert respuesta_enlace.status_code == 200
     ruta_confirmacion = respuesta_enlace.redirect_chain[-1][0]
-    respuesta_cambio = client.post(ruta_confirmacion, {"new_password1": "OtraClaveFuerte-2026", "new_password2": "OtraClaveFuerte-2026"})
+    respuesta_cambio = client.post(ruta_confirmacion, {
+        "new_password1": "OtraClaveFuerte-2026", "new_password2": "OtraClaveFuerte-2026",
+    })
     assert respuesta_cambio.url == reverse("accounts:recuperar_completo")
     cliente.refresh_from_db()
     assert cliente.check_password("OtraClaveFuerte-2026")
@@ -159,10 +248,15 @@ def test_recuperacion_no_revela_y_envia_correo(client, cliente):
 @pytest.mark.django_db
 def test_perfil_actualiza_campos_pero_no_correo(client, cliente):
     client.force_login(cliente)
-    respuesta = client.post(reverse("accounts:perfil"), {"nombre": "Ana Nueva", "telefono": "3001234567", "direccion": "Casa 2", "correo": "cambiado@example.com"})
+    respuesta = client.post(reverse("accounts:perfil"), {
+        "nombre": "Ana Nueva", "telefono": "3001234567", "direccion": "Casa 2",
+        "correo": "cambiado@example.com",
+    })
     assert respuesta.url == reverse("accounts:perfil")
     cliente.refresh_from_db()
-    assert (cliente.nombre, cliente.telefono, cliente.direccion, cliente.correo) == ("Ana Nueva", "3001234567", "Casa 2", "ana@example.com")
+    assert (cliente.nombre, cliente.telefono, cliente.direccion, cliente.correo) == (
+        "Ana Nueva", "3001234567", "Casa 2", "ana@example.com",
+    )
 
 
 @pytest.mark.django_db
@@ -191,10 +285,10 @@ def test_raiz_y_paginas_correctas(client, cliente, emprendedora):
 
 @pytest.mark.django_db
 def test_correo_login_se_normaliza(cliente):
-    form = LoginForm(data={"correo": "ANA@EXAMPLE.COM", "password": "ClaveFuerte-2026", "perfil": "Cliente"})
+    form = LoginForm(data={"correo": "ANA@EXAMPLE.COM", "password": "ClaveFuerte-2026"})
     assert form.is_valid()
     assert form.usuario.pk == cliente.pk
-    
+
 
 @pytest.mark.django_db
 def test_contrasena_se_guarda_con_pbkdf2(cliente):
@@ -205,6 +299,6 @@ def test_contrasena_se_guarda_con_pbkdf2(cliente):
 def test_login_sin_token_csrf_es_rechazado(cliente):
     navegador = Client(enforce_csrf_checks=True)
     respuesta = navegador.post(reverse("accounts:login"), {
-        "correo": cliente.correo, "password": "ClaveFuerte-2026", "perfil": "Cliente",
+        "correo": cliente.correo, "password": "ClaveFuerte-2026",
     })
     assert respuesta.status_code == 403

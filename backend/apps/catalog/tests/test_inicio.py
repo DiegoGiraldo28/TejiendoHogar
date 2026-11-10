@@ -6,9 +6,9 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.catalog.models import Producto
-from apps.catalog.services import crear_producto, productos_destacados
+from apps.catalog.services import productos_destacados
+from conftest import crear_producto_prueba, imagen_png_prueba
 from .test_catalog_public import crear_producto_publico
-from .test_catalog import imagen
 
 
 @pytest.mark.django_db
@@ -85,11 +85,11 @@ def test_inicio_consulta_productos_en_un_numero_constante(client, django_assert_
 @pytest.mark.django_db
 def test_servicio_productos_destacados_respeta_limite():
     for indice in range(1, 4):
-        crear_producto(
+        crear_producto_prueba(
             nombre=f"Prenda {indice}",
             descripcion="Prenda artesanal hecha a mano",
             precio=Decimal("45000"),
-            imagen=imagen(f"prenda-{indice}.png"),
+            imagen=imagen_png_prueba(f"prenda-{indice}.png"),
             tipo=Producto.Tipo.DISPONIBLE,
             tiempo_produccion_dias=5,
             stock_producto=4,

@@ -1,5 +1,0 @@
-# Estudiantes
-
-- Diego
-- Luisa
-- Santiago

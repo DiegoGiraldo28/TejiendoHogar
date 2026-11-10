@@ -8,20 +8,18 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from apps.catalog.models import Producto
-from apps.catalog.services import crear_producto
-from .test_catalog import imagen
+from conftest import crear_producto_prueba, imagen_png_prueba
+from apps.inventory.models import Insumo
+from apps.inventory.services import guardar_receta
 
 
 def crear_producto_publico(indice, *, tipo=Producto.Tipo.DISPONIBLE, activo=True, stock=4):
-    producto = crear_producto(
-        nombre=f"Prenda {indice:03d}", descripcion="Prenda artesanal hecha a mano",
-        precio=Decimal("45000"), imagen=imagen(f"prenda-{indice}.png"), tipo=tipo,
-        tiempo_produccion_dias=5, stock_producto=stock,
+    return crear_producto_prueba(
+        nombre=f"Prenda {indice:03d}",
+        descripcion="Prenda artesanal hecha a mano", precio=Decimal("45000"),
+        imagen=imagen_png_prueba(f"prenda-{indice}.png"), tipo=tipo,
+        tiempo_produccion_dias=5, stock_producto=stock, activo=activo,
     )
-    if producto.activo != activo:
-        producto.activo = activo
-        producto.save(update_fields=["activo"])
-    return producto
 
 
 @pytest.mark.django_db
@@ -56,6 +54,16 @@ def test_catalogo_busca_filtra_por_tipo_y_muestra_estado_vacio(client):
 
 
 @pytest.mark.django_db
+def test_catalogo_busca_sin_distinguir_tildes(client):
+    crear_producto_prueba(nombre="Caf\u00e9 artesanal", tipo=Producto.Tipo.DISPONIBLE)
+
+    respuesta = client.get(reverse("catalog:lista"), {"q": "cafe"})
+
+    assert respuesta.status_code == 200
+    assert "Caf\u00e9 artesanal".encode() in respuesta.content
+
+
+@pytest.mark.django_db
 def test_catalogo_pagina_en_lotes_de_doce(client):
     for indice in range(1, 15):
         crear_producto_publico(indice)
@@ -76,6 +84,21 @@ def test_detalle_activo_muestra_descripcion_y_para_agotado_deshabilita_pedido(cl
 
 
 @pytest.mark.django_db
+def test_detalle_sobre_pedido_sin_unidades_fabricables_mantiene_boton_deshabilitado(client, cliente):
+    producto = crear_producto_publico(1, tipo=Producto.Tipo.SOBRE_PEDIDO)
+    insumo = Insumo.objects.create(nombre="Tela agotada", unidad_medida=Insumo.Unidad.METROS)
+    guardar_receta(producto=producto, lineas=[{"insumo": insumo, "cantidad_requerida": 1}])
+    producto.activo = True
+    producto.save(update_fields=["activo"])
+    client.force_login(cliente)
+
+    respuesta = client.get(reverse("catalog:detalle", args=[producto.pk]))
+
+    assert b"Sin insumos por ahora" in respuesta.content
+    assert b"disabled>Hacer pedido</button>" in respuesta.content
+
+
+@pytest.mark.django_db
 def test_producto_inactivo_desaparece_y_detalle_responde_404(client):
     producto = crear_producto_publico(1, activo=False)
     assert b"Prenda 001" not in client.get(reverse("catalog:lista")).content
@@ -85,6 +108,10 @@ def test_producto_inactivo_desaparece_y_detalle_responde_404(client):
 @pytest.mark.django_db
 def test_detalle_ofrece_pedido_a_cliente_y_vista_previa_a_emprendedora(client, cliente, emprendedora):
     producto = crear_producto_publico(1)
+    insumo = Insumo.objects.create(
+        nombre="Tela para pedido", unidad_medida=Insumo.Unidad.METROS, cantidad_disponible=1,
+    )
+    guardar_receta(producto=producto, lineas=[{"insumo": insumo, "cantidad_requerida": 1}])
     url = reverse("catalog:detalle", args=[producto.pk])
     anonimo = client.get(url)
     assert f"next=/catalogo/{producto.pk}/".encode() in anonimo.content
@@ -101,7 +128,7 @@ def test_login_desde_detalle_retorna_a_producto_si_next_es_seguro(client, client
     producto = crear_producto_publico(1)
     destino = reverse("catalog:detalle", args=[producto.pk])
     respuesta = client.post(f"{reverse('accounts:login')}?next={destino}", {
-        "correo": cliente.correo, "password": "ClaveFuerte-2026", "perfil": "Cliente",
+        "correo": cliente.correo, "password": "ClaveFuerte-2026",
     })
     assert respuesta.status_code == 302
     assert respuesta.url == destino
@@ -120,12 +147,13 @@ def test_catalogo_tiene_consultas_constantes_y_responde_antes_de_dos_segundos(cl
     assert respuesta.status_code == 200
     assert len(consultas) <= 2
     assert duracion < 2
-    
+
+
 @pytest.mark.django_db
 def test_nombre_con_script_se_muestra_escapado(client):
-    crear_producto(
+    crear_producto_prueba(
         nombre="<script>alert(1)</script>", descripcion="Prenda artesanal hecha a mano",
-        precio=Decimal("45000"), imagen=imagen(), tipo=Producto.Tipo.DISPONIBLE,
+        precio=Decimal("45000"), imagen=imagen_png_prueba(), tipo=Producto.Tipo.DISPONIBLE,
         tiempo_produccion_dias=5, stock_producto=4,
     )
     contenido = client.get(reverse("catalog:lista")).content

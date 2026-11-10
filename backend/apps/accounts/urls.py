@@ -9,7 +9,10 @@ urlpatterns = [
     path("logout/", views.SalirView.as_view(), name="logout"),
     path("recuperar/", views.RecuperarContrasenaView.as_view(), name="recuperar"),
     path("recuperar/enviado/", views.RecuperarEnviadoView.as_view(), name="recuperar_enviado"),
-    re_path(r"^recuperar/(?P<uidb64>[0-9A-Za-z_-]+)/(?P<token>[^/]+)/$", views.RecuperarConfirmarView.as_view(), name="recuperar_confirmar"),
+    re_path(
+        r"^recuperar/(?P<uidb64>[0-9A-Za-z_-]+)/(?P<token>[^/]+)/$",
+        views.RecuperarConfirmarView.as_view(), name="recuperar_confirmar",
+    ),
     path("recuperar/completo/", views.RecuperarCompletoView.as_view(), name="recuperar_completo"),
     path("perfil/", views.perfil, name="perfil"),
     path("cliente/", views.pagina_cliente, name="cliente"),

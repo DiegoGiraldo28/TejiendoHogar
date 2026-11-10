@@ -5,6 +5,8 @@ from django.core.paginator import Paginator
 from django.db.models import F
 from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.common.constants import TAMANO_PAGINA, TAMANO_PAGINA_MOVIMIENTOS
+from apps.common.forms import agregar_errores
 from apps.accounts.models import Usuario
 from apps.accounts.permissions import rol_requerido
 from apps.catalog.models import Producto
@@ -19,18 +21,18 @@ def lista_insumos(request):
     busqueda = request.GET.get("q", "").strip()
     estado = request.GET.get("estado", "")
     if busqueda:
-        insumos = insumos.filter(nombre__icontains=busqueda)
+        insumos = insumos.filter(nombre__unaccent__icontains=busqueda)
     if estado == "bajo":
         insumos = insumos.filter(cantidad_disponible__lte=F("stock_minimo"))
     elif estado == "disponible":
         insumos = insumos.filter(cantidad_disponible__gt=F("stock_minimo"))
-    pagina = Paginator(insumos, 12).get_page(request.GET.get("page"))
+    pagina = Paginator(insumos, TAMANO_PAGINA).get_page(request.GET.get("page"))
     formulario = InsumoForm(request.POST or None)
     if request.method == "POST" and formulario.is_valid():
         try:
             crear_insumo(**formulario.cleaned_data)
         except ValidationError as error:
-            _agregar_errores(formulario, error)
+            agregar_errores(formulario, error)
         else:
             messages.success(request, "Materia prima registrada correctamente.")
             return redirect("inventory:insumos")
@@ -47,7 +49,7 @@ def insumo_nuevo(request):
         try:
             crear_insumo(**formulario.cleaned_data)
         except ValidationError as error:
-            _agregar_errores(formulario, error)
+            agregar_errores(formulario, error)
         else:
             messages.success(request, "Materia prima registrada correctamente.")
             return redirect("inventory:insumos")
@@ -62,11 +64,13 @@ def insumo_editar(request, insumo_id):
         try:
             actualizar_insumo(insumo=insumo, **formulario.cleaned_data)
         except ValidationError as error:
-            _agregar_errores(formulario, error)
+            agregar_errores(formulario, error)
         else:
             messages.success(request, "Datos del insumo actualizados.")
             return redirect("inventory:insumos")
-    return render(request, "inventory/insumo_form.html", {"form": formulario, "titulo": "Actualizar material", "insumo": insumo})
+    return render(request, "inventory/insumo_form.html", {
+        "form": formulario, "titulo": "Actualizar material", "insumo": insumo,
+    })
 
 
 @rol_requerido(Usuario.Rol.EMPRENDEDORA)
@@ -77,7 +81,7 @@ def insumo_entrada(request, insumo_id):
         try:
             registrar_entrada(insumo_id=insumo.pk, cantidad=formulario.cleaned_data["cantidad"])
         except ValidationError as error:
-            _agregar_errores(formulario, error)
+            agregar_errores(formulario, error)
         else:
             messages.success(request, "Entrada de inventario registrada correctamente.")
             return redirect("inventory:insumo_movimientos", insumo_id=insumo.pk)
@@ -91,7 +95,7 @@ def insumo_movimientos(request, insumo_id):
     movimientos = MovimientoInsumo.objects.filter(insumo=insumo).order_by("-fecha_movimiento", "-pk")
     if formulario.is_valid() and formulario.cleaned_data["tipo_movimiento"]:
         movimientos = movimientos.filter(tipo_movimiento=formulario.cleaned_data["tipo_movimiento"])
-    pagina = Paginator(movimientos, 20).get_page(request.GET.get("page"))
+    pagina = Paginator(movimientos, TAMANO_PAGINA_MOVIMIENTOS).get_page(request.GET.get("page"))
     return render(request, "inventory/movimientos.html", {"insumo": insumo, "form": formulario, "pagina": pagina})
 
 
@@ -123,15 +127,9 @@ def receta(request, producto_id):
                 for mensaje in mensajes_error:
                     formset.forms[0].add_error(None, mensaje)
         else:
-            messages.success(request, "Receta guardada. Puedes activarla desde la lista de productos.")
-            return redirect("inventory:receta", producto_id=producto.pk)
-    return render(request, "inventory/receta.html", {"producto": producto, "formset": formset})
-
-
-def _agregar_errores(formulario, error):
-    if hasattr(error, "message_dict"):
-        for campo, errores in error.message_dict.items():
-            for mensaje in errores:
-                formulario.add_error(campo if campo in formulario.fields else None, mensaje)
-    else:
-        formulario.add_error(None, str(error))
+            messages.success(request, "Receta guardada. Ya puedes activar el producto.")
+            return redirect("catalog:productos")
+    sin_insumos = not Insumo.objects.exists()
+    return render(request, "inventory/receta.html", {
+        "producto": producto, "formset": formset, "sin_insumos": sin_insumos,
+    })

@@ -16,8 +16,14 @@ class InsumoForm(forms.ModelForm):
     class Meta:
         model = Insumo
         fields = ["nombre", "unidad_medida", "cantidad_disponible", "stock_minimo"]
-        labels = {"nombre": "Nombre de la materia prima", "unidad_medida": "Unidad de medida", "cantidad_disponible": "Cantidad", "stock_minimo": "Stock mínimo"}
-        help_texts = {"cantidad_disponible": "Si ingresas una cantidad inicial, se registrará como una entrada."}
+        labels = {
+            "nombre": "Nombre de la materia prima", "unidad_medida": "Unidad de medida",
+            "cantidad_disponible": "Cantidad", "stock_minimo": "Stock mínimo",
+        }
+        help_texts = {
+            "cantidad_disponible": "Cantidad inicial: mínimo 0. Si es mayor que 0, se registra como entrada.",
+            "stock_minimo": "Stock mínimo: mínimo 0.",
+        }
         widgets = {
             "cantidad_disponible": forms.NumberInput(attrs={"min": "0", "step": "0.01"}),
             "stock_minimo": forms.NumberInput(attrs={"min": "0", "step": "0.01"}),
@@ -32,7 +38,11 @@ class InsumoEdicionForm(forms.ModelForm):
     class Meta:
         model = Insumo
         fields = ["nombre", "unidad_medida", "stock_minimo"]
-        labels = {"nombre": "Nombre de la materia prima", "unidad_medida": "Unidad de medida", "stock_minimo": "Stock mínimo"}
+        labels = {
+            "nombre": "Nombre de la materia prima", "unidad_medida": "Unidad de medida",
+            "stock_minimo": "Stock mínimo",
+        }
+        help_texts = {"stock_minimo": "Stock mínimo: mínimo 0."}
         widgets = {"stock_minimo": forms.NumberInput(attrs={"min": "0", "step": "0.01"})}
 
     def __init__(self, *args, **kwargs):
@@ -41,7 +51,11 @@ class InsumoEdicionForm(forms.ModelForm):
 
 
 class EntradaForm(forms.Form):
-    cantidad = forms.DecimalField(min_value=0.01, max_digits=10, decimal_places=2, label="Cantidad que ingresa", widget=forms.NumberInput(attrs={"min": "0.01", "step": "0.01"}))
+    cantidad = forms.DecimalField(
+        min_value=0.01, max_digits=10, decimal_places=2, label="Cantidad que ingresa",
+        help_text="La cantidad debe ser mayor que 0.",
+        widget=forms.NumberInput(attrs={"min": "0.01", "step": "0.01"}),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -58,7 +72,12 @@ class ProductoInsumoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["insumo"].queryset = Insumo.objects.order_by("nombre")
+        self.fields["insumo"].label_from_instance = self._etiqueta_insumo
         _conectar_ayudas(self)
+
+    @staticmethod
+    def _etiqueta_insumo(insumo):
+        return f"{insumo.nombre} ({insumo.get_unidad_medida_display()})"
 
 
 RecetaFormSet = inlineformset_factory(
@@ -68,4 +87,7 @@ RecetaFormSet = inlineformset_factory(
 
 
 class MovimientoFiltroForm(forms.Form):
-    tipo_movimiento = forms.ChoiceField(required=False, choices=[("", "Todos los movimientos"), *MovimientoInsumo.Tipo.choices], label="Tipo de movimiento")
+    tipo_movimiento = forms.ChoiceField(
+        required=False, choices=[("", "Todos los movimientos"), *MovimientoInsumo.Tipo.choices],
+        label="Tipo de movimiento",
+    )

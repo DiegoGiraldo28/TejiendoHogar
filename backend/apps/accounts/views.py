@@ -2,12 +2,16 @@
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import LoginView, LogoutView, PasswordResetView, PasswordResetDoneView, PasswordResetConfirmView, PasswordResetCompleteView
+from django.contrib.auth.views import (
+    LoginView, LogoutView, PasswordResetView, PasswordResetDoneView,
+    PasswordResetConfirmView, PasswordResetCompleteView,
+)
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
 
+from apps.common.forms import agregar_errores
 from .forms import RegistroForm, LoginForm, PerfilForm, CorreoRecuperacionForm, NuevaContrasenaForm
 from .models import Usuario
 from .permissions import rol_requerido, RolRequeridoMixin
@@ -20,22 +24,21 @@ def destino_rol(usuario):
 
 
 def registro(request):
+    """Registra una cuenta pública de Cliente y presenta errores del formulario."""
     if request.user.is_authenticated:
         return redirect(destino_rol(request.user))
     formulario = RegistroForm(request.POST or None)
     if request.method == "POST" and formulario.is_valid():
-        if formulario.cleaned_data["perfil"] == Usuario.Rol.EMPRENDEDORA:
-            formulario.add_error("perfil", "Las cuentas de Emprendedora las crea el administrador del sistema.")
+        try:
+            registrar_cliente(**{
+                campo: formulario.cleaned_data[campo]
+                for campo in ("nombre", "correo", "password", "telefono", "direccion")
+            })
+        except ValidationError as error:
+            agregar_errores(formulario, error)
         else:
-            try:
-                registrar_cliente(**{campo: formulario.cleaned_data[campo] for campo in ("nombre", "correo", "password", "telefono", "direccion")})
-            except ValidationError as error:
-                for campo, errores in error.message_dict.items():
-                    for mensaje in errores:
-                        formulario.add_error(campo, mensaje)
-            else:
-                messages.success(request, "Tu cuenta se creó correctamente. Ya puedes iniciar sesión.")
-                return redirect("accounts:login")
+            messages.success(request, "Tu cuenta se creó correctamente. Ya puedes iniciar sesión.")
+            return redirect("accounts:login")
     return render(request, "accounts/registro.html", {"form": formulario, "auth_tab": "registro"})
 
 
@@ -66,10 +69,14 @@ class SalirView(LogoutView):
 
 @login_required
 def perfil(request):
+    """Permite a la persona autenticada actualizar su nombre, teléfono y dirección."""
     formulario = PerfilForm(request.POST or None, instance=request.user)
     if request.method == "POST" and formulario.is_valid():
         usuario = formulario.save(commit=False)
-        actualizar_perfil(usuario=usuario, nombre=usuario.nombre, telefono=usuario.telefono or "", direccion=usuario.direccion or "")
+        actualizar_perfil(
+            usuario=usuario, nombre=usuario.nombre,
+            telefono=usuario.telefono or "", direccion=usuario.direccion or "",
+        )
         messages.success(request, "Tu perfil se actualizó correctamente.")
         return redirect("accounts:perfil")
     return render(request, "accounts/perfil.html", {"form": formulario})

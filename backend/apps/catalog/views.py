@@ -2,12 +2,15 @@
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import Usuario
 from apps.accounts.permissions import rol_requerido
 from apps.accounts.views import destino_rol
+from apps.common.constants import TAMANO_PAGINA
+from apps.common.forms import agregar_errores
 from .forms import ProductoForm
 from .models import Producto
 from .services import (
@@ -29,7 +32,7 @@ def lista_productos(request):
         estado=request.GET.get("estado", ""),
         tipo=request.GET.get("tipo", ""),
     )
-    pagina = Paginator(productos, 12).get_page(request.GET.get("page"))
+    pagina = Paginator(productos, TAMANO_PAGINA).get_page(request.GET.get("page"))
     return render(request, "catalog/productos.html", {"pagina": pagina})
 
 
@@ -40,13 +43,19 @@ def producto_nuevo(request):
         try:
             producto = crear_producto(**formulario.cleaned_data)
         except ValidationError as error:
-            _agregar_errores(formulario, error)
+            agregar_errores(formulario, error)
         else:
-            messages.success(request, "Producto creado. Completa su receta para poder activarlo.")
+            messages.success(
+                request,
+                "Producto creado. Paso 2: define su receta con los insumos que tienes registrados.",
+            )
             if producto.tipo == Producto.Tipo.SOBRE_PEDIDO:
                 return redirect("inventory:receta", producto_id=producto.pk)
             return redirect("catalog:productos")
-    return render(request, "catalog/producto_form.html", {"form": formulario, "titulo": "Nuevo producto"})
+    return render(request, "catalog/producto_form.html", {
+        "form": formulario, "titulo": "Nuevo producto",
+        "mostrar_aviso_imagen": request.method == "POST" and not formulario.is_valid(),
+    })
 
 
 @rol_requerido(Usuario.Rol.EMPRENDEDORA)
@@ -57,11 +66,15 @@ def producto_editar(request, producto_id):
         try:
             actualizar_producto(producto=producto, **formulario.cleaned_data)
         except ValidationError as error:
-            _agregar_errores(formulario, error)
+            agregar_errores(formulario, error)
         else:
             messages.success(request, "Producto actualizado correctamente.")
             return redirect("catalog:productos")
-    return render(request, "catalog/producto_form.html", {"form": formulario, "producto": producto, "titulo": "Editar producto"})
+    return render(request, "catalog/producto_form.html", {
+        "form": formulario, "producto": producto, "titulo": "Editar producto",
+        "mostrar_aviso_imagen": request.method == "POST" and not formulario.is_valid()
+        and bool(request.FILES.get("imagen")),
+    })
 
 
 @rol_requerido(Usuario.Rol.EMPRENDEDORA)
@@ -100,7 +113,8 @@ def lista(request):
     """Muestra productos activos con búsqueda, filtro y paginación."""
     busqueda = request.GET.get("q", "").strip()
     tipo = request.GET.get("tipo", "")
-    pagina = listar_publicos(busqueda=busqueda, tipo=tipo).get_page(request.GET.get("page"))
+    pagina = Paginator(listar_publicos(busqueda=busqueda, tipo=tipo), TAMANO_PAGINA).get_page(
+        request.GET.get("page"))
     return render(request, "catalog/lista.html", {
         "pagina": pagina,
         "busqueda": busqueda,
@@ -112,14 +126,6 @@ def lista(request):
 def detalle(request, producto_id):
     """Muestra un producto activo o responde 404 si está oculto."""
     producto = obtener_publico(id_producto=producto_id)
+    if producto is None:
+        raise Http404("Producto no encontrado")
     return render(request, "catalog/detalle.html", {"producto": producto})
-
-
-def _agregar_errores(formulario, error):
-    """Traslada errores de los servicios a los campos del formulario."""
-    if hasattr(error, "message_dict"):
-        for campo, mensajes in error.message_dict.items():
-            for mensaje in mensajes:
-                formulario.add_error(campo if campo in formulario.fields else None, mensaje)
-    else:
-        formulario.add_error(None, str(error))

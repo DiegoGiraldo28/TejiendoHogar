@@ -14,19 +14,13 @@ from apps.inventory.services import (
     guardar_receta, insumos_en_stock_bajo, productos_en_stock_bajo,
     registrar_entrada, unidades_fabricables, validar_disponibilidad,
 )
-from apps.catalog.tests.test_catalog import imagen
-from apps.catalog.services import crear_producto
-
-
-@pytest.fixture(autouse=True)
-def media_temporal(tmp_path, settings):
-    settings.MEDIA_ROOT = tmp_path
+from conftest import crear_producto_prueba, imagen_png_prueba
 
 
 def producto(*, tipo=Producto.Tipo.SOBRE_PEDIDO):
-    return crear_producto(
+    return crear_producto_prueba(
         nombre="Prenda", descripcion="Descripción", precio=Decimal("100"),
-        imagen=imagen("prenda.png"), tipo=tipo, tiempo_produccion_dias=3,
+        imagen=imagen_png_prueba("prenda.png"), tipo=tipo, tiempo_produccion_dias=3,
     )
 
 
@@ -144,7 +138,8 @@ def test_rutas_de_inventario_protegen_por_rol(client, ruta, kwargs, cliente, emp
     insumo = crear_insumo(nombre="Tela", unidad_medida=Insumo.Unidad.METROS)
     prenda = producto()
     parametros = {"insumo": insumo.pk, "producto": prenda.pk}
-    url = reverse(ruta, kwargs={clave: parametros[valor] for clave, valor in kwargs.items()}) if kwargs else reverse(ruta)
+    url = reverse(ruta, kwargs={clave: parametros[valor] for clave, valor in kwargs.items()}) \
+        if kwargs else reverse(ruta)
     client.logout()
     assert client.get(url).status_code == 302
     client.force_login(cliente)
@@ -257,13 +252,15 @@ def test_producto_sobre_pedido_redirige_y_guarda_receta_en_flujo_completo(client
     respuesta_creacion = client.post(reverse("catalog:producto_nuevo"), {
         "nombre": "Vestido sobre pedido", "descripcion": "Confección artesanal",
         "precio": "45000", "tipo": Producto.Tipo.SOBRE_PEDIDO,
-        "tiempo_produccion_dias": "5", "stock_producto": "0", "stock_minimo": "0",
-        "imagen": imagen("vestido.png"),
-    })
+        "tiempo_produccion_dias": "5",
+        "imagen": imagen_png_prueba("vestido.png"),
+    }, follow=True)
     prenda = Producto.objects.get(nombre="Vestido sobre pedido")
+    assert not prenda.activo and prenda.stock_producto == 0
     url_receta = reverse("inventory:receta", args=[prenda.pk])
-    assert respuesta_creacion.status_code == 302
-    assert respuesta_creacion.url == url_receta
+    assert respuesta_creacion.status_code == 200
+    assert respuesta_creacion.redirect_chain[0][0] == url_receta
+    assert b"Producto creado. Paso 2: define su receta" in respuesta_creacion.content
     formulario = client.get(url_receta)
     assert formulario.status_code == 200
     assert b'name="receta-TOTAL_FORMS"' in formulario.content
@@ -272,9 +269,34 @@ def test_producto_sobre_pedido_redirige_y_guarda_receta_en_flujo_completo(client
         "receta-TOTAL_FORMS": "1", "receta-INITIAL_FORMS": "0",
         "receta-MIN_NUM_FORMS": "0", "receta-MAX_NUM_FORMS": "1000",
         "receta-0-insumo": str(insumo.pk), "receta-0-cantidad_requerida": "1.25",
-    })
-    assert respuesta_receta.status_code == 302
+    }, follow=True)
+    assert respuesta_receta.status_code == 200
+    assert respuesta_receta.redirect_chain[0][0] == reverse("catalog:productos")
+    assert b"Receta guardada. Ya puedes activar el producto." in respuesta_receta.content
     assert prenda.receta.get().cantidad_requerida == Decimal("1.25")
+
+
+@pytest.mark.django_db
+def test_receta_sin_insumos_muestra_enlace_y_no_permite_guardar(client, emprendedora):
+    client.force_login(emprendedora)
+    prenda = producto()
+    respuesta = client.get(reverse("inventory:receta", args=[prenda.pk]))
+    assert b"No hay insumos registrados" in respuesta.content
+    assert reverse("inventory:insumo_nuevo").encode() in respuesta.content
+    assert b"Guardar receta" not in respuesta.content
+
+
+@pytest.mark.django_db
+def test_producto_disponible_sin_stock_muestra_errores_en_campos(client, emprendedora):
+    client.force_login(emprendedora)
+    respuesta = client.post(reverse("catalog:producto_nuevo"), {
+        "nombre": "Prenda sin stock", "descripcion": "Confección artesanal", "precio": "45000",
+        "tipo": Producto.Tipo.DISPONIBLE, "tiempo_produccion_dias": "5",
+        "imagen": imagen_png_prueba("disponible.png"),
+    })
+    assert respuesta.status_code == 200
+    assert b"Revisa los campos marcados." in respuesta.content
+    assert b"Este campo es obligatorio para un producto Disponible." in respuesta.content
 
 
 @pytest.mark.django_db

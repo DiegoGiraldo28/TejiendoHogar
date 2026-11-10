@@ -80,32 +80,10 @@
   font-family: var(--fuente-titulo);
 }
 
-.register-material-button {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: .65rem 1rem;
-  border-radius: 10px;
-  background: var(--terracota);
-  color: white;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.register-material-button:hover {
-  background: var(--terracota-oscuro);
-}
-
 @media (max-width: 560px) {
   .insumos-heading {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .register-material-button {
-    align-self: flex-start;
   }
 }
 

@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 from apps.accounts.models import Usuario
 from apps.accounts.permissions import rol_requerido
 from apps.catalog.models import Producto
+from apps.inventory.services import validar_disponibilidad
 from .forms import PedidoEnProcesoForm
 
 
@@ -20,9 +21,15 @@ def en_proceso(request):
 
     producto = formulario.cleaned_data["producto_id"]
     cantidad = formulario.cleaned_data["cantidad"]
-    if producto.tipo == Producto.Tipo.DISPONIBLE and cantidad > producto.stock_producto:
-        formulario.add_error("cantidad", "La cantidad supera las unidades disponibles.")
-        return render(request, "orders/en_proceso.html", {"form": formulario}, status=400)
+    if producto.tipo == Producto.Tipo.DISPONIBLE:
+        if cantidad > producto.stock_producto:
+            formulario.add_error("cantidad", "La cantidad supera las unidades disponibles.")
+            return render(request, "orders/en_proceso.html", {"form": formulario}, status=400)
+    else:
+        disponible, _ = validar_disponibilidad(producto=producto, cantidad=cantidad)
+        if not disponible:
+            formulario.add_error("cantidad", "No hay insumos suficientes para fabricar esta cantidad.")
+            return render(request, "orders/en_proceso.html", {"form": formulario}, status=400)
 
     subtotal = producto.precio * Decimal(cantidad)
     return render(request, "orders/en_proceso.html", {

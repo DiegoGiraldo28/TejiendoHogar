@@ -5,16 +5,15 @@ import pytest
 from django.urls import reverse
 
 from apps.catalog.models import Producto
-from apps.catalog.services import crear_producto
-from apps.catalog.tests.test_catalog import imagen
+from conftest import crear_producto_prueba, imagen_png_prueba
 from apps.inventory.models import Insumo
 from apps.inventory.services import crear_insumo, guardar_receta
 
 
 def producto(*, tipo=Producto.Tipo.DISPONIBLE, stock=3):
-    return crear_producto(
+    return crear_producto_prueba(
         nombre="Blusa de lino", descripcion="Tejida a mano", precio=Decimal("45000"),
-        imagen=imagen("blusa.png"), tipo=tipo, tiempo_produccion_dias=5,
+        imagen=imagen_png_prueba("blusa.png"), tipo=tipo, tiempo_produccion_dias=5,
         stock_producto=stock,
     )
 
@@ -80,7 +79,7 @@ def test_pedido_rechaza_producto_inactivo(client, cliente):
 @pytest.mark.django_db
 def test_pedido_sobre_pedido_no_usa_stock_de_producto(client, cliente):
     prenda = producto(tipo=Producto.Tipo.SOBRE_PEDIDO, stock=0)
-    insumo = crear_insumo(nombre="Lino", unidad_medida=Insumo.Unidad.METROS)
+    insumo = crear_insumo(nombre="Lino", unidad_medida=Insumo.Unidad.METROS, cantidad_disponible=10)
     guardar_receta(producto=prenda, lineas=[{"insumo": insumo, "cantidad_requerida": 1}])
     prenda.activo = True
     prenda.save(update_fields=["activo"])
@@ -88,3 +87,27 @@ def test_pedido_sobre_pedido_no_usa_stock_de_producto(client, cliente):
     respuesta = client.post(reverse("orders:en_proceso"), {"producto_id": prenda.pk, "cantidad": 10})
     assert respuesta.status_code == 200
     assert respuesta.context["subtotal"] == Decimal("450000")
+
+
+@pytest.mark.django_db
+def test_pedido_sobre_pedido_rechaza_insumos_insuficientes(client, cliente):
+    prenda = producto(tipo=Producto.Tipo.SOBRE_PEDIDO, stock=0)
+    insumo = crear_insumo(nombre="Lino agotado", unidad_medida=Insumo.Unidad.METROS)
+    guardar_receta(producto=prenda, lineas=[{"insumo": insumo, "cantidad_requerida": 1}])
+    prenda.activo = True
+    prenda.save(update_fields=["activo"])
+    client.force_login(cliente)
+
+    respuesta = client.post(reverse("orders:en_proceso"), {"producto_id": prenda.pk, "cantidad": 1})
+
+    assert respuesta.status_code == 400
+    assert b"No hay insumos suficientes" in respuesta.content
+
+
+@pytest.mark.django_db
+def test_pedido_rechaza_mas_de_diez_unidades_sobre_pedido(client, cliente):
+    prenda = producto()
+    client.force_login(cliente)
+    respuesta = client.post(reverse("orders:en_proceso"), {"producto_id": prenda.pk, "cantidad": 11})
+    assert respuesta.status_code == 400
+    assert "Puedes solicitar m\u00e1ximo 10 unidades por pedido".encode() in respuesta.content

@@ -4,9 +4,12 @@ const camposStock = document.querySelector("[data-stock-fields]");
 
 function actualizarCamposStock() {
   if (!tipoProducto || !camposStock) return;
-  const disponible = tipoProducto.value === "Disponible";
-  camposStock.hidden = !disponible;
-  camposStock.querySelectorAll("input").forEach((campo) => { campo.disabled = !disponible; });
+  const disponible = tipoProducto.value === tipoProducto.dataset.tipoDisponible;
+  const tieneErrores = camposStock.dataset.stockErrors === "true";
+  camposStock.hidden = !disponible && !tieneErrores;
+  camposStock.querySelectorAll("input").forEach((campo) => {
+    campo.disabled = !disponible && !tieneErrores;
+  });
 }
 
 tipoProducto?.addEventListener("change", actualizarCamposStock);

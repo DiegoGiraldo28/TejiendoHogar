@@ -1,8 +1,9 @@
 {% extends "base.html" %}
-{% load humanize static %}
+{% load humanize static inventario %}
 {% block title %}{{ producto.nombre }} | TejiendoHogar{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}">{% endblock %}
 {% block content %}
+{% unidades_fabricables producto as unidades_fabricables_producto %}{% max_unidades_sobre_pedido as max_unidades_pedido %}
 <section class="page-wrap product-detail-wrap">
   <a class="back-link" href="{% url 'catalog:lista' %}">← Volver al catálogo</a>
   <article class="product-detail-card">
@@ -24,12 +25,15 @@
         {% if not user.is_authenticated or user.rol != 'Emprendedora' %}<button class="primary-button" type="button" disabled>Producto agotado</button>{% endif %}
       {% elif user.is_authenticated and user.rol == 'Emprendedora' %}
         <p class="stock-note">Vista previa para clientes.</p>
+      {% elif producto.tipo == 'Sobre_pedido' and unidades_fabricables_producto == 0 %}
+        <p class="stock-note" role="status">Sin insumos por ahora</p>
+        <button class="primary-button" type="button" disabled>Hacer pedido</button>
       {% elif user.is_authenticated and user.rol == 'Cliente' %}
         <form method="post" action="{% url 'orders:en_proceso' %}" class="order-form">
           {% csrf_token %}<input type="hidden" name="producto_id" value="{{ producto.id_producto }}">
           <label for="id_cantidad">Cantidad</label>
           {% if producto.tipo == 'Disponible' %}<input id="id_cantidad" type="number" name="cantidad" min="1" max="{{ producto.stock_producto }}" value="1" required>
-          {% else %}<input id="id_cantidad" type="number" name="cantidad" min="1" max="10" value="1" required>{% endif %}
+          {% else %}<input id="id_cantidad" type="number" name="cantidad" min="1" max="{{ max_unidades_pedido }}" value="1" required>{% endif %}
           <button class="primary-button" type="submit">Hacer pedido</button>
         </form>
       {% else %}

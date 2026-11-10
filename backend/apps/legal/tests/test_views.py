@@ -15,9 +15,10 @@ def test_pagina_legal_publica_y_renderiza_contenido(client, ruta, texto):
     assert texto.encode() in respuesta.content
 
 
-def test_politica_privacidad_identifica_placeholders_de_responsable(client):
-    respuesta = client.get(reverse("legal:privacidad"))
+@pytest.mark.parametrize("ruta", ["legal:terminos", "legal:privacidad", "legal:cookies"])
+def test_paginas_legales_muestran_datos_del_responsable(client, ruta):
+    respuesta = client.get(reverse(ruta))
 
-    assert b"[Nombre legal del responsable]" in respuesta.content
-    assert b"[NIT]" in respuesta.content
-    assert b"[Correo de contacto]" in respuesta.content
+    assert b"Equipo TejiendoHogar" in respuesta.content
+    assert b"900.123.456-7 (ficticio, con fines acad\xc3\xa9micos)" in respuesta.content
+    assert b"diegoh.giraldoc@uqvirtual.edu.co" in respuesta.content
