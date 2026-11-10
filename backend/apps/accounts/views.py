@@ -2,6 +2,7 @@
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.contrib.auth.views import (
     LoginView, LogoutView, PasswordResetView, PasswordResetDoneView,
     PasswordResetConfirmView, PasswordResetCompleteView,
@@ -89,6 +90,12 @@ class RecuperarContrasenaView(PasswordResetView):
     form_class = CorreoRecuperacionForm
     success_url = reverse_lazy("accounts:recuperar_enviado")
     from_email = None
+
+    def get_context_data(self, **kwargs):
+        return {
+            **super().get_context_data(**kwargs),
+            "ses_sandbox": getattr(settings, "SES_SANDBOX", False),
+        }
 
 
 class RecuperarEnviadoView(PasswordResetDoneView):

@@ -13,6 +13,7 @@ from apps.accounts.forms import LoginForm
 from apps.accounts.models import IntentoAcceso
 from apps.accounts.services import registrar_cliente
 from django.test import Client
+from django.test import override_settings
 
 Usuario = get_user_model()
 
@@ -243,6 +244,28 @@ def test_recuperacion_no_revela_y_envia_correo(client, cliente):
     assert cliente.check_password("OtraClaveFuerte-2026")
     client.post(reverse("accounts:recuperar"), {"email": "noexiste@example.com"})
     assert len(mail.outbox) == 1
+
+
+@override_settings(SES_SANDBOX=True)
+def test_aviso_ses_sandbox_visible_con_enlace_mailto(client):
+    respuesta = client.get(reverse("accounts:recuperar"))
+
+    contenido = respuesta.content.decode()
+    assert "Por ahora, el correo de recuperación solo llega a direcciones previamente verificadas." in contenido
+    assert '<a href="mailto:diegoh.giraldoc@uqvirtual.edu.co">' in contenido
+
+
+@override_settings(SES_SANDBOX=False)
+def test_aviso_ses_sandbox_oculto_con_ajuste_falso(client):
+    respuesta = client.get(reverse("accounts:recuperar"))
+
+    assert "Por ahora, el correo de recuperación" not in respuesta.content.decode()
+
+
+def test_aviso_ses_sandbox_oculto_si_ajuste_no_existe(client):
+    respuesta = client.get(reverse("accounts:recuperar"))
+
+    assert "Por ahora, el correo de recuperación" not in respuesta.content.decode()
 
 
 @pytest.mark.django_db
