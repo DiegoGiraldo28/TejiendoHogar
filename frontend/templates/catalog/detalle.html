@@ -10,14 +10,17 @@
     <img class="detail-image" src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}">
     <div class="detail-copy">
       {% if producto.tipo == 'Sobre_pedido' %}
-        <span class="badge badge-order">Sobre pedido · se confecciona en {{ producto.tiempo_produccion_dias }} días</span>
+        <span class="badge badge-order">Sobre pedido</span>
       {% elif producto.stock_producto == 0 %}
         <span class="badge badge-muted">Agotado</span>
       {% else %}
         <span class="badge badge-success">Disponible</span>
       {% endif %}
       <h1>{{ producto.nombre }}</h1>
-      <p class="customer-price detail-price">$ {{ producto.precio|floatformat:0|intcomma }}</p>
+      <p class="customer-price detail-price">$ {{ producto.precio|floatformat:0|intcomma }} <small>COP</small></p>
+      {% if producto.tipo == 'Sobre_pedido' %}
+        <p class="detail-elaboracion"><strong>Elaboración artesanal:</strong> se confecciona en {{ producto.tiempo_produccion_dias }} día{{ producto.tiempo_produccion_dias|pluralize }} por unidad.</p>
+      {% endif %}
       <div class="product-description">{{ producto.descripcion|linebreaks }}</div>
       {% if producto.tipo == 'Disponible' and producto.stock_producto == 0 %}
         <p class="stock-note" role="status">Este producto está agotado por el momento.</p>
@@ -27,20 +30,33 @@
         <p class="stock-note">Vista previa para clientes.</p>
       {% elif producto.tipo == 'Sobre_pedido' and unidades_fabricables_producto == 0 %}
         <p class="stock-note" role="status">Sin insumos por ahora</p>
-        <button class="primary-button" type="button" disabled>Hacer pedido</button>
-      {% elif user.is_authenticated and user.rol == 'Cliente' %}
-        <form method="post" action="{% url 'orders:en_proceso' %}" class="order-form">
-          {% csrf_token %}<input type="hidden" name="producto_id" value="{{ producto.id_producto }}">
-          <label for="id_cantidad">Cantidad</label>
-          {% if producto.tipo == 'Disponible' %}<input id="id_cantidad" type="number" name="cantidad" min="1" max="{{ producto.stock_producto }}" value="1" required>
-          {% else %}<input id="id_cantidad" type="number" name="cantidad" min="1" max="{{ max_unidades_pedido }}" value="1" required>{% endif %}
-          <button class="primary-button" type="submit">Hacer pedido</button>
-        </form>
+        <div class="compra-acciones">
+          <button class="icon-button" type="button" disabled aria-label="Agregar a la bolsa"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button>
+          <button class="primary-button" type="button" disabled>Comprar ahora</button>
+        </div>
       {% else %}
-        <p class="stock-note">Inicia sesión para continuar con tu pedido.</p>
-        <a class="primary-button button-link" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">Iniciar sesión para hacer pedido</a>
+        <form method="post" action="{% url 'orders:bolsa_agregar' producto.id_producto %}" class="compra-form" id="comprar">
+          {% csrf_token %}
+          <div class="cantidad-caja">
+            <div>
+              <label for="id_cantidad">Cantidad</label>
+              <small id="id_cantidad_help" class="help-text">{% if producto.tipo == 'Disponible' %}Hasta {{ producto.stock_producto }} unidad{{ producto.stock_producto|pluralize:"es" }} disponibles{% else %}Máximo {{ max_unidades_pedido }} unidades por pedido{% endif %}</small>
+            </div>
+            <div class="cantidad-control" data-cantidad>
+              <button class="cantidad-boton" type="submit" name="accion" value="menos" formnovalidate aria-label="Disminuir cantidad" data-paso="-1">−</button>
+              <input id="id_cantidad" type="number" name="cantidad" inputmode="numeric" min="1" max="{% if producto.tipo == 'Disponible' %}{{ producto.stock_producto }}{% else %}{{ max_unidades_pedido }}{% endif %}" value="{{ request.GET.cantidad|default:1 }}" required aria-describedby="id_cantidad_help">
+              <button class="cantidad-boton" type="submit" name="accion" value="mas" formnovalidate aria-label="Aumentar cantidad" data-paso="1">+</button>
+            </div>
+          </div>
+          <div class="compra-acciones">
+            <button class="icon-button" type="submit" name="accion" value="agregar" aria-label="Agregar a la bolsa" title="Agregar a la bolsa"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><path d="M12 11v6M9 14h6"/></svg></button>
+            <button class="primary-button" type="submit" name="accion" value="comprar">Comprar ahora • $ {{ producto.precio|floatformat:0|intcomma }}</button>
+          </div>
+          {% if not user.is_authenticated %}<p class="stock-note"><a href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Inicia sesión</a> para comprar; volverás a este producto.</p>{% endif %}
+        </form>
       {% endif %}
     </div>
   </article>
 </section>
 {% endblock %}
+{% block scripts %}<script src="{% static 'js/pedidos.js' %}" defer></script>{% endblock %}

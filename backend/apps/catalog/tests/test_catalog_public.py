@@ -95,7 +95,7 @@ def test_detalle_sobre_pedido_sin_unidades_fabricables_mantiene_boton_deshabilit
     respuesta = client.get(reverse("catalog:detalle", args=[producto.pk]))
 
     assert b"Sin insumos por ahora" in respuesta.content
-    assert b"disabled>Hacer pedido</button>" in respuesta.content
+    assert b"disabled>Comprar ahora</button>" in respuesta.content
 
 
 @pytest.mark.django_db
@@ -116,11 +116,11 @@ def test_detalle_ofrece_pedido_a_cliente_y_vista_previa_a_emprendedora(client, c
     anonimo = client.get(url)
     assert f"next=/catalogo/{producto.pk}/".encode() in anonimo.content
     client.force_login(cliente)
-    assert b"Hacer pedido" in client.get(url).content
+    assert b"Comprar ahora" in client.get(url).content
     client.force_login(emprendedora)
     previa = client.get(url)
     assert b"Vista previa para clientes" in previa.content
-    assert b"Hacer pedido" not in previa.content
+    assert b"Comprar ahora" not in previa.content
 
 
 @pytest.mark.django_db

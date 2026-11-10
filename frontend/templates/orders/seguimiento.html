@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load humanize static %}
+{% block title %}Seguimiento {{ pedido.numero_visible }} | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}"><link rel="stylesheet" href="{% static 'css/orders.css' %}">{% endblock %}
+{% block content %}
+<section class="pedido-wrap">
+  <header class="pedido-cabecera">
+    <a class="volver-icono" href="{% url 'orders:mis_pedidos' %}"><span aria-hidden="true">←</span><span class="visually-hidden">Volver a Mis pedidos</span></a>
+    <div>
+      <h1>Seguimiento del pedido <span class="numero-destacado">{{ pedido.numero_visible }}</span></h1>
+      <p class="help-text">Consulta el estado de confección y los detalles de entrega de tus piezas artesanales.</p>
+    </div>
+    <span class="pastilla estado-{{ pedido.estado|lower }}">{{ pedido.estado_cliente }}</span>
+  </header>
+  {% if pedido.estado != 'Cancelado' %}{% include "orders/_pasos.html" %}{% endif %}
+
+  <div class="pedido-columnas seguimiento-columnas">
+    <div class="pedido-principal">
+      <section class="tarjeta fecha-entrega" aria-labelledby="titulo-fecha">
+        {% if pedido.estado == 'Cancelado' %}
+          <p class="eyebrow" id="titulo-fecha">Pedido cancelado</p>
+          <p class="fecha-larga">{{ pedido.fecha_cancelacion|date:"l, j \d\e F \d\e Y"|capfirst }}</p>
+        {% elif pedido.fecha_estimada_entrega %}
+          <p class="eyebrow" id="titulo-fecha">Fecha estimada de entrega</p>
+          <p class="fecha-larga">{{ pedido.fecha_estimada_entrega|date:"l, j \d\e F \d\e Y"|capfirst }}</p>
+        {% else %}
+          <p class="eyebrow" id="titulo-fecha">Fecha estimada si pagas hoy</p>
+          <p class="fecha-larga">{{ fecha_estimada|date:"l, j \d\e F \d\e Y"|capfirst }}</p>
+          <p class="help-text">Es una estimación: la fecha se fija cuando confirmes el pago.</p>
+        {% endif %}
+        <div class="direccion-entrega">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          <div>
+            <p class="eyebrow">Dirección de entrega</p>
+            <p class="direccion-texto">{{ pedido.direccion_entrega }}</p>
+            <p class="help-text">Contacto: {{ pedido.telefono_contacto }}</p>
+          </div>
+        </div>
+        {% if pedido.estado == 'Pendiente' %}
+        <div class="seguimiento-acciones" data-confirm-container>
+          <a class="primary-button button-link" href="{% url 'orders:pago' pedido.pk %}">Continuar al pago</a>
+          <a class="secondary-button button-link" data-fallback-delete href="{% url 'orders:cancelar' pedido.pk %}">Cancelar pedido</a>
+          <button type="button" class="secondary-button" data-open-confirm hidden>Cancelar pedido</button>
+          <dialog class="confirm-dialog" aria-labelledby="titulo-cancelar">
+            <form method="post" action="{% url 'orders:cancelar' pedido.pk %}">{% csrf_token %}
+              <h2 id="titulo-cancelar">¿Cancelar el pedido {{ pedido.numero_visible }}?</h2>
+              <p>El pedido aún no se ha pagado, así que no se cobra nada. Esta acción no se puede deshacer.</p>
+              <button type="button" class="secondary-button" data-close-confirm>Volver</button>
+              <button type="submit" class="danger-button">Sí, cancelar pedido</button>
+            </form>
+          </dialog>
+        </div>
+        {% endif %}
+      </section>
+
+      <section class="tarjeta estado-pedido" aria-labelledby="titulo-estado">
+        <div class="resumen-encabezado">
+          <h2 id="titulo-estado" class="tarjeta-titulo">Estado del pedido</h2>
+          {% if ultimo_cambio %}<span class="pastilla pastilla-pendiente">Actualizado {{ ultimo_cambio|naturalday:"j M" }}</span>{% endif %}
+        </div>
+        {% if pedido.estado == 'Cancelado' %}
+          <p class="aviso-cancelado" role="status">Este pedido fue cancelado el {{ pedido.fecha_cancelacion|date:"j \d\e F \d\e Y, g:i A" }}. No se realizará la entrega.</p>
+        {% else %}
+          <ol class="linea-estados">
+            {% for etapa in etapas %}
+            <li class="etapa{% if etapa.completado %} etapa-hecha{% endif %}{% if etapa.actual %} etapa-actual{% endif %}"{% if etapa.actual %} aria-current="step"{% endif %}>
+              <span class="etapa-marca" aria-hidden="true">{% if etapa.completado %}✓{% else %}{{ forloop.counter }}{% endif %}</span>
+              <span class="etapa-texto">
+                <span class="etapa-nombre">{{ etapa.nombre }}</span>
+                {% if etapa.actual and not etapa.completado %}<span class="etapa-tag">Etapa actual</span>{% endif %}
+                <span class="etapa-fecha">{% if etapa.fecha %}{{ etapa.fecha|date:"j M, g:i A" }}{% else %}Por realizar{% endif %}</span>
+              </span>
+            </li>
+            {% endfor %}
+          </ol>
+        {% endif %}
+      </section>
+    </div>
+
+    <aside class="tarjeta resumen-pedido" aria-labelledby="titulo-compra">
+      <div class="resumen-encabezado">
+        <h2 id="titulo-compra" class="tarjeta-titulo">Resumen de compra</h2>
+        <span class="pastilla pastilla-neutra">{{ unidades }} pieza{{ unidades|pluralize }}</span>
+      </div>
+      <ul class="lineas-resumen">
+        {% for detalle in detalles %}
+        <li>
+          <img class="linea-imagen-mini" src="{{ detalle.producto.imagen.url }}" alt="" width="56" height="56" loading="lazy">
+          <div><span class="linea-nombre">{{ detalle.producto.nombre }}</span><small>{{ detalle.cantidad }} unidad{{ detalle.cantidad|pluralize:"es" }}{% if detalle.origen == 'Confeccion' %} · Confección{% elif detalle.origen == 'Stock' %} · En stock{% endif %}</small></div>
+          <strong>$ {{ detalle.subtotal|floatformat:0|intcomma }} COP</strong>
+        </li>
+        {% endfor %}
+      </ul>
+      <dl class="resumen-filas"><div><dt>Subtotal</dt><dd>$ {{ pedido.subtotal|floatformat:0|intcomma }} COP</dd></div></dl>
+      <div class="resumen-total"><span>{% if pedido.pago_simulado_estado == 'Exitoso' %}Total pagado{% else %}Total a pagar{% endif %}</span><strong>$ {{ pedido.subtotal|floatformat:0|intcomma }} COP</strong></div>
+      <a class="secondary-button button-link boton-ancho" href="{% url 'catalog:lista' %}">Volver al catálogo</a>
+    </aside>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/confirmar.js' %}" defer></script>{% endblock %}

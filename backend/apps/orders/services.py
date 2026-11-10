@@ -6,7 +6,7 @@ from typing import Any, Iterable
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import F, Sum
+from django.db.models import F, Prefetch, QuerySet, Sum
 from django.utils import timezone
 
 from apps.accounts.models import Usuario
@@ -18,7 +18,9 @@ from apps.inventory.services import (
     calcular_requerimiento, descontar_insumos, devolver_insumos, validar_disponibilidad,
 )
 from .carrito import Bolsa, validar_cantidad
-from .models import ESTADOS_ACEPTADOS, DetallePedido, HistorialEstadoPedido, Pedido, RechazoPedido
+from .models import (
+    ESTADOS_ACEPTADOS, NOMBRES_ESTADO_CLIENTE, DetallePedido, HistorialEstadoPedido, Pedido, RechazoPedido,
+)
 from .pagos import obtener_pasarela
 
 logger = logging.getLogger(__name__)
@@ -343,6 +345,37 @@ def cancelar_pedido(*, pedido: Pedido, usuario: Usuario) -> Pedido:
     return bloqueado
 
 
+ESTADOS_LINEA = [Estado.PENDIENTE, Estado.CONFIRMADO, Estado.EN_PREPARACION, Estado.LISTO, Estado.ENTREGADO]
+
+
+def linea_de_estados(*, pedido: Pedido, para_cliente: bool = True) -> list[dict[str, Any]]:
+    """Etapas del pedido con la fecha de cada cambio tomada del historial (requiere historial precargado)."""
+    fechas = {registro.estado_nuevo: registro.fecha_cambio for registro in pedido.historial.all()}
+    actual = ESTADOS_LINEA.index(pedido.estado) if pedido.estado in ESTADOS_LINEA else -1
+    etapas = []
+    for indice, estado in enumerate(ESTADOS_LINEA):
+        etapas.append({
+            "estado": estado,
+            "nombre": NOMBRES_ESTADO_CLIENTE[estado] if para_cliente else Estado(estado).label,
+            "fecha": fechas.get(estado),
+            "completado": indice < actual or (indice == actual and estado == Estado.ENTREGADO),
+            "actual": indice == actual,
+        })
+    return etapas
+
+
+def pedidos_de_cliente(*, cliente: Usuario) -> QuerySet[Pedido]:
+    """Pedidos de una Cliente, del más reciente al más antiguo."""
+    return Pedido.objects.filter(cliente=cliente).order_by("-id_pedido")
+
+
+def obtener_pedido_de_cliente(*, cliente: Usuario, pedido_id: int) -> Pedido | None:
+    """Pedido de la Cliente con sus líneas e historial; None si no existe o es de otra Cliente."""
+    return Pedido.objects.filter(pk=pedido_id, cliente=cliente).prefetch_related(
+        Prefetch("detalles", queryset=DetallePedido.objects.select_related("producto")), "historial",
+    ).first()
+
+
 def preparar_pedido_desde_bolsa(*, cliente: Usuario, bolsa: Bolsa, direccion: str, telefono: str) -> Pedido:
     """Crea el pedido Pendiente de la bolsa o reutiliza el de la sesión si nada cambió.
 
@@ -370,7 +403,12 @@ def preparar_pedido_desde_bolsa(*, cliente: Usuario, bolsa: Bolsa, direccion: st
             return previo
     nuevo = crear_pedido(cliente=cliente, lineas=lineas, direccion=direccion, telefono=telefono)
     if previo is not None:
-        cancelar_pedido(pedido=previo, usuario=cliente)
-        logger.info("El pedido pendiente %s se reemplazó por %s.", previo.pk, nuevo.pk)
+        try:
+            cancelar_pedido(pedido=previo, usuario=cliente)
+        except ValidationError:
+            # Pudo pagarse o cancelarse en otra pestaña justo ahora: se sigue con el pedido nuevo.
+            logger.warning("No se pudo cancelar el pedido pendiente %s al reemplazarlo por %s.", previo.pk, nuevo.pk)
+        else:
+            logger.info("El pedido pendiente %s se reemplazó por %s.", previo.pk, nuevo.pk)
     bolsa.pedido_pendiente_id = nuevo.pk
     return nuevo

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load humanize static %}
+{% block title %}Mis pedidos | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}"><link rel="stylesheet" href="{% static 'css/orders.css' %}">{% endblock %}
+{% block content %}
+<section class="pedido-wrap">
+  <header class="pedido-cabecera">
+    <div><h1>Mis pedidos</h1><p class="help-text">Revisa el estado y la fecha estimada de tus compras.</p></div>
+  </header>
+  {% if pagina.object_list %}
+    <ul class="lista-pedidos">
+      {% for pedido in pagina %}
+      <li class="tarjeta pedido-item">
+        <div class="pedido-item-cabecera">
+          <h2><a href="{% url 'orders:seguimiento' pedido.pk %}">Pedido {{ pedido.numero_visible }}</a></h2>
+          <span class="pastilla estado-{{ pedido.estado|lower }}">{{ pedido.estado_cliente }}</span>
+        </div>
+        <dl class="pedido-item-datos">
+          <div><dt>Fecha</dt><dd>{{ pedido.fecha_creacion|date:"j M Y" }}</dd></div>
+          <div><dt>Total</dt><dd>$ {{ pedido.subtotal|floatformat:0|intcomma }} COP</dd></div>
+          <div><dt>Entrega estimada</dt><dd>{% if pedido.fecha_estimada_entrega %}{{ pedido.fecha_estimada_entrega|date:"j M Y" }}{% elif pedido.estado == 'Pendiente' %}Al confirmar el pago{% else %}—{% endif %}</dd></div>
+        </dl>
+        <div class="pedido-item-acciones">
+          {% if pedido.estado == 'Pendiente' %}<a class="primary-button button-link" href="{% url 'orders:pago' pedido.pk %}">Continuar al pago<span class="visually-hidden"> del pedido {{ pedido.numero_visible }}</span></a>{% endif %}
+          <a class="secondary-button button-link" href="{% url 'orders:seguimiento' pedido.pk %}">Ver seguimiento<span class="visually-hidden"> del pedido {{ pedido.numero_visible }}</span></a>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% include "partials/_paginacion.html" with pagina=pagina %}
+  {% else %}
+    <section class="empty-state" aria-live="polite">
+      <h2>Aún no tienes pedidos</h2>
+      <p>Cuando compres una pieza, aquí podrás seguir su confección y entrega.</p>
+      <a class="primary-button button-link" href="{% url 'catalog:lista' %}">Ir al catálogo</a>
+    </section>
+  {% endif %}
+</section>
+{% endblock %}

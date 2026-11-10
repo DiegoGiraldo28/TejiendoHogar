@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load humanize static %}
+{% block title %}Bolsa de compra | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}"><link rel="stylesheet" href="{% static 'css/orders.css' %}">{% endblock %}
+{% block body_class %}{% if lineas %}con-barra-accion{% endif %}{% endblock %}
+{% block tabbar %}{% endblock %}
+{% block content %}
+<section class="pedido-wrap">
+  <header class="pedido-cabecera">
+    <a class="volver-icono" href="{% url 'catalog:lista' %}"><span aria-hidden="true">←</span><span class="visually-hidden">Volver al catálogo</span></a>
+    <h1>Bolsa de compra y pedido</h1>
+    <span class="pastilla pastilla-neutra">{{ unidades }} artículo{{ unidades|pluralize }} en tu bolsa</span>
+  </header>
+  {% include "orders/_pasos.html" %}
+
+  {% if not lineas %}
+    <section class="empty-state bolsa-vacia" aria-live="polite">
+      <h2>Tu bolsa está vacía</h2>
+      <p>Explora el catálogo y elige las piezas hechas a mano que quieras llevar a casa.</p>
+      <a class="primary-button button-link" href="{% url 'catalog:lista' %}">Ir al catálogo</a>
+    </section>
+  {% else %}
+  <form method="post" class="data-form bolsa-form pedido-columnas">
+    {% csrf_token %}
+    <div class="pedido-principal">
+      <h2 class="seccion-titulo">Tus piezas seleccionadas</h2>
+      <ul class="lineas-bolsa">
+        {% for linea in lineas %}
+        <li class="tarjeta linea-bolsa">
+          <img class="linea-imagen" src="{{ linea.producto.imagen.url }}" alt="" width="96" height="96" loading="lazy">
+          <div class="linea-info">
+            <h3>{{ linea.producto.nombre }}</h3>
+            <p class="linea-precio">$ {{ linea.precio|floatformat:0|intcomma }} <small>COP</small></p>
+            <p class="linea-origen {% if linea.producto.tipo == 'Sobre_pedido' %}origen-pedido{% else %}origen-stock{% endif %}">{% if linea.producto.tipo == 'Disponible' %}En stock en taller{% else %}Sobre pedido ({{ linea.producto.tiempo_produccion_dias }} día{{ linea.producto.tiempo_produccion_dias|pluralize }}){% endif %}</p>
+          </div>
+          <button class="linea-quitar" type="submit" name="accion" value="quitar:{{ linea.producto.pk }}" formnovalidate><span aria-hidden="true">×</span> Quitar<span class="visually-hidden"> {{ linea.producto.nombre }}</span></button>
+          <div class="cantidad-control linea-cantidad" role="group" aria-label="Cantidad de {{ linea.producto.nombre }}">
+            <button class="cantidad-boton" type="submit" name="accion" value="menos:{{ linea.producto.pk }}" formnovalidate aria-label="Disminuir cantidad de {{ linea.producto.nombre }}">−</button>
+            <span class="cantidad-valor">{{ linea.cantidad }}</span>
+            <button class="cantidad-boton" type="submit" name="accion" value="mas:{{ linea.producto.pk }}" formnovalidate aria-label="Aumentar cantidad de {{ linea.producto.nombre }}" {% if linea.cantidad >= linea.tope %}disabled{% endif %}>+</button>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+
+      <section class="tarjeta entrega" aria-labelledby="titulo-entrega">
+        <h2 id="titulo-entrega" class="tarjeta-titulo"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>Datos de entrega</h2>
+        {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="entrega-campos">
+          <div class="form-field destinatario">
+            <span class="campo-etiqueta">Destinatario</span>
+            <p class="campo-texto">{{ user.nombre }}</p>
+          </div>
+          {% include "partials/_field.html" with field=form.telefono %}
+          <div class="entrega-direccion">{% include "partials/_field.html" with field=form.direccion %}</div>
+        </div>
+        <p class="help-text">Se precargan de tu perfil. Si los cambias aquí, solo se usan en este pedido.</p>
+      </section>
+    </div>
+
+    <aside class="tarjeta resumen-pedido" aria-labelledby="titulo-resumen">
+      <h2 id="titulo-resumen" class="tarjeta-titulo">Resumen del pedido</h2>
+      <dl class="resumen-filas">
+        <div><dt>Subtotal ({{ unidades }} producto{{ unidades|pluralize }})</dt><dd>$ {{ total|floatformat:0|intcomma }} COP</dd></div>
+        <div><dt>Fecha estimada de entrega</dt><dd>{{ fecha_estimada|date:"j \d\e F \d\e Y" }}</dd></div>
+      </dl>
+      <div class="resumen-total"><span>Total a pagar</span><strong>$ {{ total|floatformat:0|intcomma }} COP</strong></div>
+      <p class="help-text">La fecha es una estimación con la cola actual del taller; se fija al confirmar el pago.</p>
+      <div class="barra-accion">
+        <button class="primary-button" type="submit" name="accion" value="continuar">Continuar a simular pago <span aria-hidden="true">→</span></button>
+      </div>
+    </aside>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/validacion.js' %}" defer></script>{% endblock %}

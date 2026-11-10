@@ -6,8 +6,27 @@
   <link rel="stylesheet" href="{% static 'css/variables.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/accounts.css' %}"><link rel="stylesheet" href="{% static 'css/legal.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% if user.is_authenticated and user.rol == 'Cliente' %}nav-cliente {% endif %}{% block body_class %}{% endblock %}">
   <a class="skip-link" href="#contenido">Saltar al contenido</a>
+  {% with vista=request.resolver_match.url_name app=request.resolver_match.app_name %}
+  {% if user.is_authenticated and user.rol == 'Cliente' %}
+  <nav class="site-nav cliente-nav" aria-label="Navegación principal"><a class="site-brand" href="{% url 'inicio' %}">TejiendoHogar</a>
+    <div class="site-links cliente-links">
+      <a href="{% url 'catalog:lista' %}" {% if app == 'catalog' %}aria-current="page"{% endif %}>Catálogo</a>
+      <a href="{% url 'orders:mis_pedidos' %}" {% if app == 'orders' and vista != 'bolsa' %}aria-current="page"{% endif %}>Mis pedidos</a>
+    </div>
+    <div class="cliente-iconos">
+      <a class="icono-nav" href="{% url 'orders:bolsa' %}" {% if vista == 'bolsa' %}aria-current="page"{% endif %}>
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+        <span class="visually-hidden">Bolsa</span><span class="contador-bolsa" data-contador-bolsa>{{ unidades_bolsa|default:0 }}<span class="visually-hidden"> artículos</span></span>
+      </a>
+      <a class="icono-nav" href="{% url 'accounts:perfil' %}" {% if vista == 'perfil' %}aria-current="page"{% endif %}>
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+        <span class="visually-hidden">Mi perfil</span>
+      </a>
+    </div>
+  </nav>
+  {% else %}
   <nav class="site-nav" aria-label="Navegación principal"><a class="site-brand" href="{% url 'inicio' %}">TejiendoHogar</a>
     <div class="site-links">
       {% if user.is_authenticated and user.rol == 'Emprendedora' %}
@@ -19,8 +38,22 @@
       {% else %}<a href="{% url 'accounts:login' %}" {% if request.resolver_match.url_name == 'login' %}aria-current="page"{% endif %}>Iniciar sesión</a>{% endif %}
     </div>
   </nav>
+  {% endif %}
   {% if messages %}<section class="messages" aria-live="polite">{% for message in messages %}<p class="message {{ message.tags }}">{{ message }}</p>{% endfor %}</section>{% endif %}
   <main id="contenido" tabindex="-1">{% block content %}{% endblock %}</main>
+  {% if user.is_authenticated and user.rol == 'Cliente' %}{% block tabbar %}
+  <nav class="tabbar" aria-label="Navegación de la cuenta">
+    <a href="{% url 'catalog:lista' %}" {% if app == 'catalog' %}aria-current="page"{% endif %}>
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 10h16v10H4z"/><path d="M3 10l2-6h14l2 6"/><path d="M10 20v-5h4v5"/></svg>Catálogo</a>
+    <a href="{% url 'orders:mis_pedidos' %}" {% if app == 'orders' and vista != 'bolsa' %}aria-current="page"{% endif %}>
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2 6h12v10H2z"/><path d="M14 9h4l4 4v3h-8z"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>Pedidos</a>
+    <a href="{% url 'orders:bolsa' %}" {% if vista == 'bolsa' %}aria-current="page"{% endif %}>
+      <span class="tabbar-icono"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>{% if unidades_bolsa %}<span class="contador-bolsa">{{ unidades_bolsa }}<span class="visually-hidden"> artículos</span></span>{% endif %}</span>Bolsa</a>
+    <a href="{% url 'accounts:perfil' %}" {% if vista == 'perfil' %}aria-current="page"{% endif %}>
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Perfil</a>
+  </nav>
+  {% endblock %}{% endif %}
+  {% endwith %}
   {% block scripts %}{% endblock %}
   <dialog class="legal-modal" id="dialogo-legal" aria-label="Información legal"><button class="legal-modal-close secondary-button" type="button" data-legal-close>Cerrar</button><div data-legal-content></div></dialog>
   <script src="{% static 'js/legal.js' %}" defer></script>

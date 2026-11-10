@@ -395,6 +395,28 @@ def test_preparar_pedido_ignora_pendiente_que_ya_no_esta_vigente(cliente):
 
 
 @pytest.mark.django_db
+def test_preparar_pedido_continua_si_no_puede_cancelar_el_anterior(cliente, monkeypatch):
+    blusa = disponible()
+    bolsa = Bolsa(SesionPrueba())
+    bolsa.agregar(producto=blusa, cantidad=1)
+    primero = preparar_pedido_desde_bolsa(cliente=cliente, bolsa=bolsa, direccion=DIRECCION, telefono=TELEFONO)
+    bolsa.actualizar(producto=blusa, cantidad=2)
+
+    def pagado_en_otra_pestana(*, pedido, usuario):
+        raise ValidationError("Solo puedes cancelar pedidos que están en espera de pago.")
+
+    avisos = []
+    monkeypatch.setattr("apps.orders.services.cancelar_pedido", pagado_en_otra_pestana)
+    monkeypatch.setattr("apps.orders.services.logger.warning", lambda mensaje, *args: avisos.append(mensaje % args))
+    nuevo = preparar_pedido_desde_bolsa(cliente=cliente, bolsa=bolsa, direccion=DIRECCION, telefono=TELEFONO)
+
+    assert nuevo.pk != primero.pk and nuevo.estado == Estado.PENDIENTE
+    assert bolsa.pedido_pendiente_id == nuevo.pk
+    assert Pedido.objects.get(pk=primero.pk).estado == Estado.PENDIENTE
+    assert avisos == [f"No se pudo cancelar el pedido pendiente {primero.pk} al reemplazarlo por {nuevo.pk}."]
+
+
+@pytest.mark.django_db
 def test_bolsa_agrega_actualiza_quita_y_respeta_topes():
     sesion = SesionPrueba()
     bolsa = Bolsa(sesion)

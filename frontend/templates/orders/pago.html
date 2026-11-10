@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load humanize static %}
+{% block title %}Simular pago {{ pedido.numero_visible }} | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}"><link rel="stylesheet" href="{% static 'css/orders.css' %}">{% endblock %}
+{% block body_class %}con-barra-accion barra-doble{% endblock %}
+{% block tabbar %}{% endblock %}
+{% block content %}
+<section class="pedido-wrap">
+  <header class="pedido-cabecera">
+    <a class="volver-icono" href="{% url 'orders:bolsa' %}"><span aria-hidden="true">←</span><span class="visually-hidden">Volver a la bolsa</span></a>
+    <div><p class="eyebrow">Paso 2 de 3</p><h1>Finalizar pedido</h1></div>
+    <span class="pastilla pastilla-sandbox"><span aria-hidden="true">●</span> Entorno sandbox seguro</span>
+  </header>
+  {% include "orders/_pasos.html" %}
+
+  <p class="aviso-simulado" role="note"><strong>Pago simulado:</strong> no se procesa dinero real.</p>
+  {% if pedido.pago_simulado_estado == 'Fallido' %}
+    <div class="aviso-fallido" role="alert">
+      <p><strong>El pago simulado no se aprobó: fondos insuficientes.</strong> Puedes reintentar el pago o cancelar el pedido.</p>
+      <div class="aviso-acciones">
+        <a class="primary-button button-link" href="#pagar">Reintentar</a>
+        <a class="secondary-button button-link" href="{% url 'orders:cancelar' pedido.pk %}">Cancelar pedido</a>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="pedido-columnas pago-columnas">
+    <aside class="tarjeta resumen-pedido resumen-pago" aria-labelledby="titulo-resumen">
+      <p class="eyebrow">Resumen</p>
+      <div class="resumen-encabezado">
+        <h2 id="titulo-resumen" class="numero-pedido">Pedido {{ pedido.numero_visible }}</h2>
+        <span class="pastilla pastilla-pendiente">En espera</span>
+      </div>
+      <p class="help-text">{{ unidades }} artículo{{ unidades|pluralize }} artesanal{{ unidades|pluralize:"es" }}</p>
+      <h3 class="seccion-titulo">Artículos en el pedido</h3>
+      <ul class="lineas-resumen">
+        {% for detalle in detalles %}
+        <li>
+          <img class="linea-imagen-mini" src="{{ detalle.producto.imagen.url }}" alt="" width="56" height="56" loading="lazy">
+          <div><span class="linea-nombre">{{ detalle.producto.nombre }}</span><small>Cant: {{ detalle.cantidad }}</small></div>
+          <strong>$ {{ detalle.subtotal|floatformat:0|intcomma }} COP</strong>
+        </li>
+        {% endfor %}
+      </ul>
+      <dl class="resumen-filas">
+        <div><dt>Subtotal productos</dt><dd>$ {{ pedido.subtotal|floatformat:0|intcomma }} COP</dd></div>
+        <div><dt>Fecha estimada de entrega</dt><dd>{{ fecha_estimada|date:"j \d\e F \d\e Y" }}</dd></div>
+      </dl>
+      <div class="resumen-total"><span>Total a simular</span><strong>$ {{ pedido.subtotal|floatformat:0|intcomma }} COP</strong></div>
+    </aside>
+
+    <form method="post" class="tarjeta pago-form" id="pagar" data-un-envio>
+      {% csrf_token %}
+      <fieldset class="metodos">
+        <legend><span class="tarjeta-titulo">Método de pago simulado</span></legend>
+        <p class="help-text">Selecciona una vía ficticia para validar la compra en esta prueba de taller. No se guarda ni se piden datos de tarjeta o cuenta.</p>
+        <label class="metodo">
+          <input type="radio" name="metodo" value="transferencia" checked>
+          <span class="metodo-texto">
+            <span class="metodo-nombre">Transferencia comunitaria (Nequi / Daviplata) <span class="pastilla pastilla-ok">Recomendado</span></span>
+            <span class="metodo-detalle">Billetera móvil simulada del taller, sin costo adicional</span>
+            <span class="metodo-ficticio" aria-hidden="true"><span>Cuenta simulada origen:</span><span>NEQUI •••• 4120</span><span>Referencia asignada:</span><span>{{ pedido.numero_visible }}</span></span>
+          </span>
+        </label>
+        <label class="metodo">
+          <input type="radio" name="metodo" value="tarjeta">
+          <span class="metodo-texto">
+            <span class="metodo-nombre">Tarjeta de crédito / débito de prueba</span>
+            <span class="metodo-detalle">Visa / Mastercard sandbox con número ficticio precargado</span>
+          </span>
+        </label>
+      </fieldset>
+      <div class="barra-accion barra-pago">
+        <button class="primary-button" type="submit" name="resultado" value="exitoso">Simular pago exitoso (Confirmar pedido)</button>
+        <button class="secondary-button boton-fallido" type="submit" name="resultado" value="fallido">Simular fondos insuficientes</button>
+      </div>
+      <a class="volver-texto" href="{% url 'orders:bolsa' %}"><span aria-hidden="true">←</span> Volver a la bolsa</a>
+    </form>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/pedidos.js' %}" defer></script>{% endblock %}
