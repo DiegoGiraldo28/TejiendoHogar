@@ -97,7 +97,10 @@ class MovimientoInsumo(models.Model):
 
     id_movimiento = models.AutoField(primary_key=True)
     insumo = models.ForeignKey(Insumo, db_column="id_insumo", on_delete=models.PROTECT)
-    # TODO Fase 3: agregar id_pedido y sus restricciones al integrar pedidos.
+    pedido = models.ForeignKey(
+        "orders.Pedido", db_column="id_pedido", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="movimientos_insumo",
+    )
     tipo_movimiento = models.CharField(max_length=20, choices=Tipo.choices)
     cantidad = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(
         0.01, message="La cantidad del movimiento debe ser mayor que 0.")])
@@ -107,6 +110,7 @@ class MovimientoInsumo(models.Model):
         db_table = "movimiento_insumo"
         indexes = [
             models.Index(fields=["insumo"], name="idx_movimiento_insumo"),
+            models.Index(fields=["pedido"], name="idx_movimiento_pedido"),
             models.Index(fields=["tipo_movimiento"], name="idx_movimiento_tipo"),
         ]
         constraints = [
@@ -117,6 +121,12 @@ class MovimientoInsumo(models.Model):
             models.CheckConstraint(
                 condition=models.Q(cantidad__gt=0), name="ck_movimiento_cantidad",
                 violation_error_message="La cantidad del movimiento debe ser mayor que 0.",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(tipo_movimiento=Tipo.ENTRADA, pedido__isnull=True)
+                | models.Q(tipo_movimiento__in=[Tipo.DESCUENTO, Tipo.DEVOLUCION], pedido__isnull=False),
+                name="ck_movimiento_pedido",
+                violation_error_message="Las entradas no llevan pedido; los descuentos y devoluciones sí.",
             ),
         ]
 

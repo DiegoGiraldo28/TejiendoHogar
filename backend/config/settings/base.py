@@ -65,6 +65,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTHENTICATION_BACKENDS = ["apps.accounts.backends.CorreoBackend"]
 LOGIN_URL = "accounts:login"
 LOGOUT_REDIRECT_URL = "accounts:login"
+PASARELA_PAGO = "simulada"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@tejiendohogar.local")
 LOGGING = {
     "version": 1,
