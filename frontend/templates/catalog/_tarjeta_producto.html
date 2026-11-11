@@ -1,4 +1,4 @@
-{% load humanize %}
+{% load precios %}
 <article class="customer-product-card">
   <a class="product-image-link" href="{% url 'catalog:detalle' producto.id_producto %}" aria-label="Ver {{ producto.nombre }}">
     <img class="customer-product-image" src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" loading="lazy">
@@ -12,7 +12,7 @@
       <span class="badge badge-success">Disponible</span>
     {% endif %}
     <h2><a href="{% url 'catalog:detalle' producto.id_producto %}">{{ producto.nombre }}</a></h2>
-    <p class="customer-price">$ {{ producto.precio|floatformat:0|intcomma }}</p>
+    <p class="customer-price">{{ producto.precio|precio }}</p>
     <a class="secondary-button button-link detail-button" href="{% url 'catalog:detalle' producto.id_producto %}">Ver detalle</a>
   </div>
 </article>

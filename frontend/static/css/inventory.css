@@ -272,3 +272,49 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Acciones dentro de filas (tabla de Insumos y alertas del panel): conservan el aspecto de enlace que
+   tenían en main. Los botones compartidos de base.css (.secondary-button, 44 px) no aplican aquí;
+   la especificidad .table-actions .x (0,2,0) gana a la regla de base.css (0,1,0). */
+.table-actions {
+  align-items: center;
+}
+
+.table-actions .secondary-button,
+.table-actions .text-button,
+.low-stock-list .secondary-button {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--terracota-oscuro);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
+
+.table-actions .secondary-button:hover,
+.low-stock-list .secondary-button:hover {
+  background: none;
+  color: var(--terracota);
+}
+
+/* «Eliminar…» siempre visible, con el tono de error y del tamaño de las demás acciones de la fila. */
+.table-actions .danger-button {
+  min-height: 0;
+  padding: .2rem .65rem;
+  border: 1px solid var(--error, #a22e27);
+  border-radius: 8px;
+  background: var(--error, #a22e27);
+  color: #fff;
+  font-size: .9rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.table-actions .danger-button:hover {
+  background: var(--error-suave, #fff0ef);
+  color: var(--error, #a22e27);
+  filter: none;
+}

@@ -80,7 +80,28 @@ def perfil(request):
         )
         messages.success(request, "Tu perfil se actualizó correctamente.")
         return redirect("accounts:perfil")
-    return render(request, "accounts/perfil.html", {"form": formulario})
+    plantilla = "accounts/perfil.html"
+    if request.user.rol == Usuario.Rol.EMPRENDEDORA:
+        # Mismo formulario y validaciones; solo cambian las etiquetas y la presentación.
+        plantilla = "accounts/perfil_emprendedora.html"
+        for nombre, etiqueta in ETIQUETAS_PERFIL_EMPRENDEDORA.items():
+            formulario.fields[nombre].label = etiqueta
+    return render(request, plantilla, {
+        "form": formulario, "iniciales": iniciales(request.user.nombre),
+    })
+
+
+ETIQUETAS_PERFIL_EMPRENDEDORA = {
+    "nombre": "Nombre completo",
+    "telefono": "Teléfono / WhatsApp de pedidos",
+    "direccion": "Dirección de despacho y recolección",
+}
+
+
+def iniciales(nombre: str) -> str:
+    """Iniciales del encabezado del perfil: primera letra de las dos primeras palabras («CR»)."""
+    palabras = (nombre or "").split()
+    return "".join(palabra[0] for palabra in palabras[:2]).upper() or "?"
 
 
 class RecuperarContrasenaView(PasswordResetView):

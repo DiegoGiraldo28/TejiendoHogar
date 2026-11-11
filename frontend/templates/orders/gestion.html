@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% load precios static %}
+{% block title %}{% if seleccionado %}Pedido {{ seleccionado.numero_visible }} · {% endif %}Gestión de pedidos | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}"><link rel="stylesheet" href="{% static 'css/inventory.css' %}"><link rel="stylesheet" href="{% static 'css/orders.css' %}">{% endblock %}
+{% block content %}
+<section class="page-wrap gestion-wrap">
+  <header class="gestion-cabecera">
+    <h1>Gestión de pedidos</h1>
+    <form method="get" class="gestion-busqueda" role="search">
+      {% if estado %}<input type="hidden" name="estado" value="{{ estado }}">{% endif %}
+      <label for="id_q">Buscar pedido</label>
+      <input id="id_q" type="search" name="q" value="{{ busqueda }}" placeholder="#TH-0012 o nombre de la clienta" aria-describedby="id_q_help" maxlength="100">
+      <small id="id_q_help" class="help-text">Escribe el número del pedido o el nombre de la clienta.</small>
+      <button class="secondary-button" type="submit">Buscar</button>
+    </form>
+  </header>
+
+  <nav class="filtros-estado" aria-label="Filtrar pedidos por estado">
+    {% for filtro in filtros %}
+    <a class="filtro-pastilla" href="?{% if filtro.valor %}estado={{ filtro.valor }}{% endif %}{% if busqueda %}{% if filtro.valor %}&amp;{% endif %}q={{ busqueda|urlencode }}{% endif %}"{% if filtro.valor == estado %} aria-current="page"{% endif %}>{{ filtro.nombre }} ({{ filtro.conteo }})</a>
+    {% endfor %}
+  </nav>
+
+  <div class="gestion-columnas{% if seleccionado %} con-panel{% endif %}">
+    <section class="tarjeta gestion-tabla" aria-label="Pedidos">
+      {% if pagina.object_list %}
+      <div class="table-scroll">
+        <table class="inventory-table tabla-pedidos">
+          <thead><tr><th scope="col">Pedido</th><th scope="col">Clienta</th><th scope="col">Productos</th><th scope="col">Fecha de creación</th><th scope="col">Fecha estimada</th><th scope="col">Estado</th><th scope="col"><span class="visually-hidden">Acción</span></th></tr></thead>
+          <tbody>
+          {% for pedido in pagina %}
+            <tr{% if seleccionado and pedido.pk == seleccionado.pk %} class="fila-seleccionada"{% endif %}>
+              <th scope="row">{{ pedido.numero_visible }}</th>
+              <td>{{ pedido.cliente.nombre }}</td>
+              <td class="celda-productos">{% for detalle in pedido.detalles.all %}{{ detalle.producto.nombre }} × {{ detalle.cantidad }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+              <td>{{ pedido.fecha_creacion|date:"j M" }}</td>
+              <td>{% if pedido.fecha_estimada_entrega %}{% if pedido.estado in estados_activos and pedido.fecha_estimada_entrega <= limite_alerta %}<strong class="fecha-alerta">{{ pedido.fecha_estimada_entrega|date:"j M" }}<span class="visually-hidden"> (vence pronto)</span></strong>{% else %}<strong>{{ pedido.fecha_estimada_entrega|date:"j M" }}</strong>{% endif %}{% else %}<span class="help-text">Sin confirmar</span>{% endif %}</td>
+              <td><span class="pastilla estado-{{ pedido.estado|lower }}">{{ pedido.estado_emprendedora }}</span></td>
+              <td><a class="secondary-button button-link" href="{% url 'orders:gestion_pedido' pedido.pk %}{% if parametros %}?{{ parametros }}{% endif %}"{% if seleccionado and pedido.pk == seleccionado.pk %} aria-current="true"{% endif %}>Ver detalle<span class="visually-hidden"> del pedido {{ pedido.numero_visible }}</span></a></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% include "partials/_paginacion.html" with pagina=pagina %}
+      {% else %}
+      <p class="empty-state">{% if busqueda or estado %}No hay pedidos que coincidan con el filtro.{% else %}Todavía no hay pedidos.{% endif %}</p>
+      {% endif %}
+    </section>
+
+    {% if seleccionado %}
+    <aside class="tarjeta panel-pedido" aria-labelledby="titulo-panel">
+      <div class="resumen-encabezado">
+        <h2 id="titulo-panel" class="panel-titulo">Pedido {{ pedido.numero_visible }}</h2>
+        <span class="pastilla estado-{{ pedido.estado|lower }}">{{ pedido.estado_emprendedora }}</span>
+      </div>
+
+      <h3 class="eyebrow">Estado del pedido</h3>
+      {% if pedido.estado == 'Cancelado' %}
+        <p class="aviso-cancelado" role="status">Cancelado el {{ pedido.fecha_cancelacion|date:"j \d\e F \d\e Y, g:i A" }}.</p>
+      {% endif %}
+      <ol class="estados-panel">
+        {% for etapa in etapas %}
+        <li class="{% if etapa.completado %}etapa-hecha{% endif %}{% if etapa.actual %} etapa-actual{% endif %}"{% if etapa.actual %} aria-current="step"{% endif %}>
+          <span class="estado-marca" aria-hidden="true">{% if etapa.completado %}✓{% elif etapa.actual %}•{% endif %}</span>
+          <span>{{ etapa.nombre }}{% if etapa.fecha %} <small class="help-text">· {{ etapa.fecha|date:"j M, g:i A" }}</small>{% endif %}</span>
+          {% if etapa.completado %}<span class="visually-hidden"> (completado)</span>{% elif etapa.actual %}<span class="visually-hidden"> (estado actual)</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+
+      {% if siguiente or puede_cancelar %}
+      <div class="panel-acciones" data-confirm-container>
+        {% if siguiente %}
+        <form method="post" action="{% url 'orders:avanzar' pedido.pk %}">{% csrf_token %}
+          <input type="hidden" name="nuevo_estado" value="{{ siguiente }}">
+          {% for clave, valor in campos_lista %}<input type="hidden" name="{{ clave }}" value="{{ valor }}">{% endfor %}
+          <button class="boton-avanzar" type="submit">Avanzar a "{{ siguiente_nombre }}"</button>
+        </form>
+        {% endif %}
+        {% if puede_cancelar %}
+        <a class="text-button enlace-cancelar" data-confirm-link href="{% url 'orders:gestion_cancelar' pedido.pk %}{% if parametros %}?{{ parametros }}{% endif %}">Cancelar pedido</a>
+        <dialog class="confirm-dialog" aria-labelledby="titulo-cancelar-gestion">
+          <form method="post" action="{% url 'orders:gestion_cancelar' pedido.pk %}">{% csrf_token %}
+            {% for clave, valor in campos_lista %}<input type="hidden" name="{{ clave }}" value="{{ valor }}">{% endfor %}
+            <h2 id="titulo-cancelar-gestion">¿Cancelar el pedido {{ pedido.numero_visible }}?</h2>
+            <p>{% if pedido.estado == 'Confirmado' %}Se devolverán al inventario el stock y los insumos que se descontaron al confirmar.{% else %}El pedido aún no se ha pagado; no hay nada que devolver.{% endif %} Esta acción no se puede deshacer.</p>
+            <button type="button" class="secondary-button" data-close-confirm>Volver</button>
+            <button type="submit" class="danger-button">Sí, cancelar pedido</button>
+          </form>
+        </dialog>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <section class="panel-seccion" aria-labelledby="titulo-calculo">
+        <h3 id="titulo-calculo" class="eyebrow"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg> Cálculo de fecha estimada</h3>
+        {% if desglose %}
+        <dl class="desglose-fecha">
+          <div><dt>Fecha de confirmación del pedido</dt><dd>{{ desglose.fecha_confirmacion|date:"j M Y" }}</dd></div>
+          <div><dt>+ Tiempo en cola</dt><dd>{{ desglose.dias_cola }} día{{ desglose.dias_cola|pluralize }}</dd></div>
+          <div><dt>+ Tiempo propio de este pedido</dt><dd>{{ desglose.dias_propios }} día{{ desglose.dias_propios|pluralize }}</dd></div>
+          <div><dt>+ Alistamiento</dt><dd>{{ desglose.dias_alistamiento }} día{{ desglose.dias_alistamiento|pluralize }}</dd></div>
+          <div class="desglose-total"><dt>Fecha estimada de entrega</dt><dd>{{ desglose.fecha_estimada|date:"j M Y" }}</dd></div>
+        </dl>
+        <p class="help-text">Calculado por el motor de fecha estimada: al día de confirmación se suma el tiempo ya comprometido en los pedidos Confirmados y En preparación anteriores, el tiempo de confección de este pedido (cantidad × días de cada producto Sobre pedido) y un día de alistamiento, en días calendario.</p>
+        {% else %}
+        <p class="fecha-pendiente">Fecha pendiente de confirmación</p>
+        <p class="help-text">La fecha se calcula cuando la clienta confirma el pago.</p>
+        {% endif %}
+        {% if pedido.fecha_entrega_real %}<p>Entregado el {{ pedido.fecha_entrega_real|date:"j \d\e F \d\e Y" }}.</p>{% endif %}
+      </section>
+
+      <section class="panel-seccion" aria-labelledby="titulo-clienta">
+        <h3 id="titulo-clienta" class="eyebrow">Clienta y entrega</h3>
+        <dl class="panel-datos">
+          <div><dt>Clienta</dt><dd>{{ pedido.cliente.nombre }}</dd></div>
+          <div><dt>Correo</dt><dd>{{ pedido.cliente.correo }}</dd></div>
+          <div><dt>Teléfono de contacto</dt><dd>{{ pedido.telefono_contacto }}</dd></div>
+          <div><dt>Dirección de entrega</dt><dd>{{ pedido.direccion_entrega }}</dd></div>
+          <div><dt>Creado</dt><dd>{{ pedido.fecha_creacion|date:"j M Y, g:i A" }}</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel-seccion" aria-labelledby="titulo-lineas">
+        <h3 id="titulo-lineas" class="eyebrow">Productos</h3>
+        <ul class="panel-lineas">
+          {% for detalle in detalles %}
+          <li>
+            <span><strong>{{ detalle.producto.nombre }}</strong> × {{ detalle.cantidad }}<br>
+            <small class="help-text">{{ detalle.precio_unitario|precio }} c/u · {% if detalle.origen == 'Confeccion' %}Confección ({{ detalle.dias_produccion }} día{{ detalle.dias_produccion|pluralize }} por unidad){% elif detalle.origen == 'Stock' %}Stock{% else %}Origen al confirmar{% endif %}</small></span>
+            <strong>{{ detalle.subtotal|precio }}</strong>
+          </li>
+          {% endfor %}
+        </ul>
+        <p class="panel-total"><span>Total</span><strong>{{ pedido.subtotal|precio }}</strong></p>
+      </section>
+
+      <section class="panel-seccion" aria-labelledby="titulo-pago">
+        <h3 id="titulo-pago" class="eyebrow">Pago simulado</h3>
+        <p>{% if pedido.pago_simulado_estado == 'Exitoso' %}<span class="pastilla estado-listo">Exitoso</span> Confirmado el {{ pedido.fecha_confirmacion|date:"j M Y, g:i A" }}.{% elif pedido.pago_simulado_estado == 'Fallido' %}<span class="pastilla estado-cancelado">Fallido</span> El último intento no se aprobó.{% else %}Sin intentos de pago.{% endif %}</p>
+      </section>
+
+      <section class="panel-seccion" aria-labelledby="titulo-movimientos">
+        <h3 id="titulo-movimientos" class="eyebrow">Movimientos de insumos</h3>
+        {% if movimientos %}
+        <ul class="panel-movimientos">
+          {% for movimiento in movimientos %}
+          <li><span>{{ movimiento.get_tipo_movimiento_display }} · <a href="{% url 'inventory:insumo_movimientos' movimiento.insumo_id %}">{{ movimiento.insumo.nombre }}</a></span><span>{{ movimiento.cantidad|floatformat:"-2" }} {{ movimiento.insumo.get_unidad_medida_display|lower }} · {{ movimiento.fecha_movimiento|date:"j M, g:i A" }}</span></li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="help-text">Este pedido no tiene movimientos de insumos{% if pedido.pago_simulado_estado != 'Exitoso' %} (se registran al confirmar el pago de productos Sobre pedido){% endif %}.</p>
+        {% endif %}
+      </section>
+    </aside>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/confirmar.js' %}" defer></script>{% endblock %}

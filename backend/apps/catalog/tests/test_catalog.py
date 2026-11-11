@@ -187,8 +187,52 @@ def test_formulario_producto_muestra_error_espanol_para_cero_dias(client, empren
     client.force_login(emprendedora)
     respuesta = client.post(reverse("catalog:producto_nuevo"), {
         "nombre": "Blusa", "descripcion": "Tejida", "precio": "100",
-        "tipo": Producto.Tipo.DISPONIBLE, "tiempo_produccion_dias": "0",
+        "tipo": Producto.Tipo.SOBRE_PEDIDO, "tiempo_produccion_dias": "0",
         "stock_producto": "0", "stock_minimo": "0", "imagen": imagen(),
     })
     assert respuesta.status_code == 200
     assert "Los d\u00edas de producci\u00f3n deben ser al menos 1".encode() in respuesta.content
+
+
+@pytest.mark.django_db
+def test_producto_disponible_guarda_un_dia_de_confeccion_aunque_no_se_envie(client, emprendedora):
+    client.force_login(emprendedora)
+    base = {
+        "descripcion": "Tejida", "precio": "100", "tipo": Producto.Tipo.DISPONIBLE,
+        "stock_producto": "2", "stock_minimo": "0",
+    }
+    client.post(reverse("catalog:producto_nuevo"), {**base, "nombre": "Sin campo", "imagen": imagen()})
+    client.post(reverse("catalog:producto_nuevo"), {
+        **base, "nombre": "Con campo", "tiempo_produccion_dias": "9", "imagen": imagen(),
+    })
+    assert Producto.objects.get(nombre="Sin campo").tiempo_produccion_dias == 1
+    assert Producto.objects.get(nombre="Con campo").tiempo_produccion_dias == 1
+
+
+@pytest.mark.django_db
+def test_producto_sobre_pedido_exige_dias_de_confeccion(client, emprendedora):
+    client.force_login(emprendedora)
+    respuesta = client.post(reverse("catalog:producto_nuevo"), {
+        "nombre": "Ruana", "descripcion": "Tejida", "precio": "100",
+        "tipo": Producto.Tipo.SOBRE_PEDIDO, "imagen": imagen(),
+    })
+    assert respuesta.status_code == 200
+    assert "obligatorio para un producto Sobre pedido".encode() in respuesta.content
+    assert not Producto.objects.filter(nombre="Ruana").exists()
+
+
+@pytest.mark.django_db
+def test_editar_a_disponible_guarda_un_dia_y_el_formulario_marca_el_campo(client, emprendedora):
+    producto = crear_producto(
+        nombre="Gorro", descripcion="Lana", precio="100", imagen=imagen(), tipo=Producto.Tipo.SOBRE_PEDIDO,
+        tiempo_produccion_dias=6,
+    )
+    actualizar_producto(
+        producto=producto, nombre="Gorro", descripcion="Lana", precio="100", tipo=Producto.Tipo.DISPONIBLE,
+        tiempo_produccion_dias=6, stock_producto=1,
+    )
+    producto.refresh_from_db()
+    assert producto.tiempo_produccion_dias == 1
+    client.force_login(emprendedora)
+    formulario = client.get(reverse("catalog:producto_editar", args=[producto.pk])).content
+    assert b"data-sobre-pedido-fields" in formulario

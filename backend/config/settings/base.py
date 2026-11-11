@@ -33,6 +33,7 @@ TEMPLATES = [{
     "OPTIONS": {"context_processors": [
         "django.template.context_processors.debug", "django.template.context_processors.request",
         "django.contrib.auth.context_processors.auth", "django.contrib.messages.context_processors.messages",
+        "apps.orders.context_processors.bolsa",
     ]},
 }]
 WSGI_APPLICATION = "config.wsgi.application"
@@ -65,6 +66,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTHENTICATION_BACKENDS = ["apps.accounts.backends.CorreoBackend"]
 LOGIN_URL = "accounts:login"
 LOGOUT_REDIRECT_URL = "accounts:login"
+PASARELA_PAGO = "simulada"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@tejiendohogar.local")
 LOGGING = {
     "version": 1,

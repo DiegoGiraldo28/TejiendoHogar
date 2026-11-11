@@ -325,3 +325,85 @@ def test_login_sin_token_csrf_es_rechazado(cliente):
         "correo": cliente.correo, "password": "ClaveFuerte-2026",
     })
     assert respuesta.status_code == 403
+
+
+@pytest.mark.django_db
+def test_perfil_cliente_muestra_encabezado_secciones_y_mismos_campos(client, cliente):
+    usuaria = cliente
+    usuaria.nombre = "Camila Restrepo"
+    usuaria.save(update_fields=["nombre"])
+    client.force_login(usuaria)
+    respuesta = client.get(reverse("accounts:perfil"))
+    contenido = respuesta.content.decode()
+    assert respuesta.context["iniciales"] == "CR"
+    assert '<span class="perfil-iniciales" aria-hidden="true">CR</span>' in contenido
+    assert f'<p class="perfil-correo">{usuaria.correo}</p>' in contenido
+    assert usuaria.get_rol_display() in contenido.split('class="perfil-rol"')[1].split("</span>")[0]
+    assert "Información personal" in contenido and "Dirección de entrega" in contenido
+    assert list(respuesta.context["form"].fields) == ["nombre", "telefono", "direccion"]
+    assert 'id="correo" type="email"' in contenido and "readonly" in contenido
+    assert 'inputmode="tel"' in contenido and 'pattern="' in contenido
+    assert "Guardar cambios" in contenido and "Cerrar sesión" in contenido
+    assert "Mi perfil y taller" not in contenido and "Piezas entregadas" not in contenido
+    for omitido in ("Cédula", "Ciudad", "Barrio", "Notas para entrega"):
+        assert omitido not in contenido
+
+
+@pytest.mark.django_db
+def test_perfil_emprendedora_muestra_identidad_y_datos_sin_entregas(client, emprendedora):
+    emprendedora.nombre = "María José Taller"
+    emprendedora.save(update_fields=["nombre"])
+    client.force_login(emprendedora)
+    respuesta = client.get(reverse("accounts:perfil"))
+    contenido = respuesta.content.decode()
+    assert [t.name for t in respuesta.templates][0] == "accounts/perfil_emprendedora.html"
+    assert "Configuración general" in contenido and "<h1>Mi perfil y taller</h1>" in contenido
+    assert "Gestiona tu información de contacto con tus clientas." in contenido
+    assert '<span class="perfil-taller-avatar" aria-hidden="true">MJ</span>' in contenido
+    assert '<span class="perfil-taller-rol">Emprendedora</span>' in contenido
+    assert f"<dd>{emprendedora.fecha_registro:%Y}</dd>" in contenido
+    assert re.search(r"Piezas entregadas</dt>\s*<dd>0</dd>", contenido)
+    assert "Editar información básica" in contenido
+    for etiqueta in ("Nombre completo", "Correo electrónico de contacto", "Teléfono / WhatsApp de pedidos",
+                     "Dirección de despacho y recolección"):
+        assert etiqueta in contenido
+    assert 'inputmode="tel"' in contenido and 'pattern="' in contenido and "readonly" in contenido
+    assert f'href="{reverse("alerts:panel")}">Cancelar</a>' in contenido and ">Guardar</button>" in contenido
+    assert "Cerrar sesión" not in contenido and ">Salir<" in contenido
+    for omitido in ("Artesana certificada", "Verificado", "Recepción de pagos", "Historia del taller"):
+        assert omitido not in contenido
+
+
+@pytest.mark.django_db
+def test_perfil_emprendedora_guarda_cambios_y_valida_telefono(client, emprendedora):
+    client.force_login(emprendedora)
+    url = reverse("accounts:perfil")
+    invalido = client.post(url, {"nombre": "Taller", "telefono": "abc", "direccion": "Carrera 1"})
+    assert invalido.status_code == 200 and invalido.context["form"].errors["telefono"]
+    assert "Revisa los campos marcados." in invalido.content.decode()
+    assert 'id="id_telefono_errors"' in invalido.content.decode()
+    respuesta = client.post(url, {"nombre": "Taller Tunja", "telefono": "3109876543", "direccion": "Calle 5 # 2-10"})
+    assert respuesta.url == url
+    emprendedora.refresh_from_db()
+    assert (emprendedora.nombre, emprendedora.telefono, emprendedora.direccion) == (
+        "Taller Tunja", "3109876543", "Calle 5 # 2-10",
+    )
+
+
+@pytest.mark.django_db
+def test_perfil_muestra_errores_de_telefono_junto_al_campo(client, cliente):
+    client.force_login(cliente)
+    respuesta = client.post(reverse("accounts:perfil"), {"nombre": "Ana", "telefono": "abc", "direccion": ""})
+    assert respuesta.status_code == 200
+    assert respuesta.context["form"].errors["telefono"]
+    assert "Revisa los campos marcados." in respuesta.content.decode()
+
+
+@pytest.mark.django_db
+def test_emprendedora_ve_icono_de_perfil_y_salir(client, emprendedora):
+    client.force_login(emprendedora)
+    panel = client.get(reverse("alerts:panel")).content.decode()
+    assert f'<a class="icono-nav" href="{reverse("accounts:perfil")}" aria-label="Mi perfil"' in panel
+    assert ">Mi perfil</a>" not in panel and ">Salir<" in panel
+    perfil = client.get(reverse("accounts:perfil")).content.decode()
+    assert 'aria-label="Mi perfil" aria-current="page"' in perfil

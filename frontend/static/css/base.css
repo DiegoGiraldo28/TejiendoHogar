@@ -85,3 +85,257 @@ input[type="file"] {
     gap: .5rem 1rem;
   }
 }
+
+/* Navegación de la Cliente: barra superior en PC y pestañas inferiores en móvil (Proceso 3). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.cliente-nav {
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+}
+
+.cliente-links {
+  display: none;
+}
+
+.cliente-iconos {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  margin-left: auto;
+}
+
+.icono-nav {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  color: var(--terracota-oscuro);
+}
+
+.icono-nav[aria-current="page"] {
+  background: #ffffff8c;
+}
+
+.icono-nav:focus-visible,
+.tabbar a:focus-visible {
+  outline: 3px solid #bd593d80;
+  outline-offset: 2px;
+}
+
+.contador-bolsa {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--terracota-oscuro);
+  color: white;
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+.tabbar {
+  position: fixed;
+  z-index: 20;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: .25rem .5rem calc(.25rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--borde);
+  background: var(--tarjeta);
+  box-shadow: 0 -4px 16px #563a2812;
+}
+
+.tabbar a {
+  display: grid;
+  justify-items: center;
+  min-height: 52px;
+  padding: .3rem 0;
+  border-radius: 10px;
+  color: var(--suave);
+  font-size: .78rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tabbar a[aria-current="page"] {
+  color: var(--terracota-oscuro);
+  font-weight: 700;
+}
+
+.tabbar-icono {
+  position: relative;
+}
+
+.tabbar .contador-bolsa {
+  top: -6px;
+  right: -14px;
+}
+
+.nav-cliente main {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 560px) {
+  .cliente-nav {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+@media (min-width: 900px) {
+  .cliente-links {
+    display: flex;
+    margin-left: 1.5rem;
+  }
+
+  .tabbar {
+    display: none;
+  }
+
+  .nav-cliente main {
+    padding-bottom: 2rem;
+  }
+}
+
+.salir-pc {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .salir-pc {
+    display: inline;
+    margin-left: .5rem;
+  }
+}
+
+/* Cerrar sesión en el perfil: botón secundario con la geometría del primary-button de accounts.css. */
+.logout-form {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--borde);
+}
+
+.logout-form .logout-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid var(--borde);
+  border-radius: 11px;
+  background: var(--tarjeta);
+  color: var(--terracota-oscuro);
+  font: 600 1rem var(--fuente-cuerpo);
+  cursor: pointer;
+}
+
+.logout-form .logout-button:hover {
+  background: var(--perfil);
+}
+
+.logout-form .logout-button:focus-visible {
+  outline: 3px solid #bd593d80;
+  outline-offset: 3px;
+}
+
+/* El atributo hidden siempre gana a las clases que fijan display (p. ej. .button-link). */
+[hidden] {
+  display: none !important;
+}
+
+/* Botones y diálogo de confirmación compartidos por todas las pantallas (antes solo en catalog.css,
+   por eso Insumos los mostraba sin estilo). .primary-button sigue en accounts.css y catalog.css. */
+.secondary-button,
+.danger-button {
+  min-height: 44px;
+  padding: .65rem 1rem;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary-button {
+  border: 1px solid var(--borde);
+  background: var(--tarjeta);
+  color: var(--texto);
+}
+
+.secondary-button:hover {
+  background: var(--perfil);
+}
+
+.danger-button {
+  border: 1px solid var(--error, #a22e27);
+  background: var(--error, #a22e27);
+  color: white;
+}
+
+.danger-button:hover {
+  filter: brightness(.92);
+}
+
+.text-button {
+  padding: .5rem .25rem;
+  border: 0;
+  background: transparent;
+  color: var(--terracota-oscuro);
+  font: inherit;
+  cursor: pointer;
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.secondary-button:focus-visible,
+.danger-button:focus-visible,
+.text-button:focus-visible {
+  outline: 3px solid #bd593d80;
+  outline-offset: 2px;
+}
+
+.confirm-dialog {
+  width: min(92vw, 440px);
+  border: 0;
+  border-radius: var(--radio-tarjeta);
+  box-shadow: 0 12px 45px #1b0d0a55;
+}
+
+.confirm-dialog::backdrop {
+  background: #30231f88;
+}
+
+.confirm-dialog form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .75rem;
+}
+
+.confirm-dialog h2,
+.confirm-dialog p {
+  flex-basis: 100%;
+}

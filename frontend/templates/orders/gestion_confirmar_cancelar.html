@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load precios static %}
+{% block title %}Cancelar pedido {{ pedido.numero_visible }} | TejiendoHogar{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}">{% endblock %}
+{% block content %}
+<section class="content-card">
+  <h1>Cancelar pedido {{ pedido.numero_visible }}</h1>
+  <p>Pedido de {{ pedido.cliente.nombre }} por {{ pedido.subtotal|precio }}, en estado «{{ pedido.estado_emprendedora }}».</p>
+  <p>{% if pedido.estado == 'Confirmado' %}Se devolverán al inventario el stock y los insumos que se descontaron al confirmar.{% else %}El pedido aún no se ha pagado; no hay nada que devolver.{% endif %} Esta acción no se puede deshacer.</p>
+  <form method="post">{% csrf_token %}
+    {% for clave, valor in campos_lista %}<input type="hidden" name="{{ clave }}" value="{{ valor }}">{% endfor %}
+    <button class="danger-button" type="submit">Sí, cancelar pedido</button>
+    <a class="secondary-button button-link" href="{{ volver }}">Volver</a>
+  </form>
+</section>
+{% endblock %}

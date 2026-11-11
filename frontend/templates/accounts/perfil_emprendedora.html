@@ -1,0 +1,70 @@
+{% extends "base.html" %}{% load static pedidos %}
+{% block title %}Mi perfil y taller | TejiendoHogar{% endblock %}
+{% block content %}
+{% piezas_entregadas as total_piezas %}
+<section class="perfil-taller">
+  <header class="perfil-taller-cabecera">
+    <div>
+      <span class="perfil-taller-pastilla">Configuración general</span>
+      <h1>Mi perfil y taller</h1>
+    </div>
+    <p>Gestiona tu información de contacto con tus clientas.</p>
+  </header>
+
+  <div class="perfil-taller-columnas">
+    <aside class="perfil-taller-tarjeta perfil-taller-identidad" aria-labelledby="perfil-taller-nombre">
+      <span class="perfil-taller-avatar" aria-hidden="true">{{ iniciales }}</span>
+      <h2 id="perfil-taller-nombre">{{ user.nombre }}</h2>
+      <span class="perfil-taller-rol">{{ user.get_rol_display }}</span>
+      <dl class="perfil-taller-datos">
+        <div>
+          <dt><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>Miembro desde</dt>
+          <dd>{{ user.fecha_registro|date:"Y" }}</dd>
+        </div>
+        <div>
+          <dt><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>Piezas entregadas</dt>
+          <dd>{{ total_piezas }}</dd>
+        </div>
+      </dl>
+    </aside>
+
+    <form method="post" class="perfil-taller-tarjeta perfil-taller-form" aria-labelledby="titulo-editar">{% csrf_token %}
+      <div class="perfil-taller-form-cabecera">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+        <div>
+          <h2 id="titulo-editar">Editar información básica</h2>
+          <p>Actualiza los datos de contacto que verán tus clientas.</p>
+        </div>
+      </div>
+      {% if form.errors %}<div class="form-errors" role="alert">Revisa los campos marcados.</div>{% endif %}
+      {% for error in form.non_field_errors %}<p class="form-errors">{{ error }}</p>{% endfor %}
+      <div class="perfil-taller-campos">
+        {% include "partials/_field.html" with field=form.nombre %}
+        <div class="form-field">
+          <label for="correo">Correo electrónico de contacto</label>
+          <span class="campo-con-icono">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+            <input id="correo" type="email" value="{{ user.correo }}" readonly aria-describedby="correo_help">
+          </span>
+          <small id="correo_help" class="help-text">Es tu usuario de acceso; no se puede cambiar aquí.</small>
+        </div>
+        <div class="form-field">
+          <label for="{{ form.telefono.id_for_label }}">{{ form.telefono.label }}</label>
+          <span class="campo-con-icono">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>
+            {{ form.telefono }}
+          </span>
+          <small id="{{ form.telefono.auto_id }}_help" class="help-text">{{ form.telefono.help_text }}</small>
+          <ul id="{{ form.telefono.auto_id }}_errors" class="field-error" role="alert">{% for error in form.telefono.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+        </div>
+        <div class="perfil-taller-ancho">{% include "partials/_field.html" with field=form.direccion %}</div>
+      </div>
+      <div class="perfil-taller-acciones">
+        <a class="secondary-button button-link" href="{% url 'alerts:panel' %}">Cancelar</a>
+        <button class="primary-button" type="submit">Guardar</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/validacion.js' %}" defer></script>{% endblock %}

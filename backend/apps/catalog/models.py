@@ -14,6 +14,8 @@ class Tipo(models.TextChoices):
 
 
 PRECIO_MINIMO = 0
+# Un producto Disponible no se confecciona por pedido; guarda 1 día para cumplir ck_producto_tiempo_produccion.
+DIAS_PRODUCCION_DISPONIBLE = 1
 
 
 def validar_tamano_imagen(archivo):

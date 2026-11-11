@@ -1,19 +1,27 @@
 // Ajusta campos de existencias y vista previa sin sustituir la validación del servidor.
+// Stock solo aplica a Disponible; los días de confección solo a Sobre pedido (el servidor guarda 1 en Disponible).
 const tipoProducto = document.querySelector("#id_tipo");
 const camposStock = document.querySelector("[data-stock-fields]");
+const camposSobrePedido = document.querySelector("[data-sobre-pedido-fields]");
 
-function actualizarCamposStock() {
-  if (!tipoProducto || !camposStock) return;
-  const disponible = tipoProducto.value === tipoProducto.dataset.tipoDisponible;
-  const tieneErrores = camposStock.dataset.stockErrors === "true";
-  camposStock.hidden = !disponible && !tieneErrores;
-  camposStock.querySelectorAll("input").forEach((campo) => {
-    campo.disabled = !disponible && !tieneErrores;
+function mostrarCampos(contenedor, visible, tieneErrores) {
+  if (!contenedor) return;
+  const activo = visible || tieneErrores;
+  contenedor.hidden = !activo;
+  contenedor.querySelectorAll("input").forEach((campo) => {
+    campo.disabled = !activo;
   });
 }
 
-tipoProducto?.addEventListener("change", actualizarCamposStock);
-actualizarCamposStock();
+function actualizarCamposPorTipo() {
+  if (!tipoProducto) return;
+  const disponible = tipoProducto.value === tipoProducto.dataset.tipoDisponible;
+  mostrarCampos(camposStock, disponible, camposStock?.dataset.stockErrors === "true");
+  mostrarCampos(camposSobrePedido, !disponible, camposSobrePedido?.dataset.sobrePedidoErrors === "true");
+}
+
+tipoProducto?.addEventListener("change", actualizarCamposPorTipo);
+actualizarCamposPorTipo();
 
 const campoImagen = document.querySelector("#id_imagen");
 const vistaPrevia = document.querySelector("#vista-previa");

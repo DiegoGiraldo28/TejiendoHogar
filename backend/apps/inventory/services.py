@@ -192,6 +192,55 @@ def validar_disponibilidad(*, producto: Producto, cantidad: Any) -> tuple[bool, 
     return bool(requerimientos) and not faltantes, faltantes
 
 
+def descontar_insumos(*, pedido: Any, producto: Producto, cantidad: int) -> list[MovimientoInsumo]:
+    """Descuenta los insumos de la receta para un pedido y registra un movimiento Descuento por insumo.
+
+    Debe llamarse dentro de una transacción con los insumos ya bloqueados (select_for_update).
+    Lanza ValidationError si la receta está vacía o si algún insumo no alcanza.
+    """
+    requerimientos = calcular_requerimiento(producto=producto, cantidad=cantidad)
+    if not requerimientos:
+        raise ValidationError({"insumos": f"{producto.nombre} no tiene receta registrada."})
+    movimientos = []
+    for insumo, requerido in sorted(requerimientos.items(), key=lambda item: item[0].pk):
+        actualizados = Insumo.objects.filter(pk=insumo.pk, cantidad_disponible__gte=requerido).update(
+            cantidad_disponible=F("cantidad_disponible") - requerido,
+        )
+        if not actualizados:
+            raise ValidationError({"insumos": f"No hay suficiente {insumo.nombre} para {producto.nombre}."})
+        movimiento = MovimientoInsumo(
+            insumo=insumo, pedido=pedido, tipo_movimiento=MovimientoInsumo.Tipo.DESCUENTO, cantidad=requerido,
+        )
+        movimiento.full_clean()
+        movimiento.save()
+        movimientos.append(movimiento)
+    logger.info("Se descontaron insumos de %s para el pedido %s.", producto.pk, pedido.pk)
+    return movimientos
+
+
+def devolver_insumos(*, pedido: Any) -> list[MovimientoInsumo]:
+    """Devuelve exactamente lo descontado a un pedido y registra movimientos Devolucion.
+
+    Usa los movimientos Descuento del pedido, nunca la receta actual. Debe llamarse dentro de una
+    transacción; bloquea los insumos en orden de llave primaria.
+    """
+    descuentos: dict[int, Decimal] = {}
+    for movimiento in MovimientoInsumo.objects.filter(pedido=pedido, tipo_movimiento=MovimientoInsumo.Tipo.DESCUENTO):
+        descuentos[movimiento.insumo_id] = descuentos.get(movimiento.insumo_id, Decimal("0")) + movimiento.cantidad
+    movimientos = []
+    for insumo in Insumo.objects.select_for_update().filter(pk__in=descuentos).order_by("pk"):
+        cantidad = descuentos[insumo.pk]
+        Insumo.objects.filter(pk=insumo.pk).update(cantidad_disponible=F("cantidad_disponible") + cantidad)
+        movimiento = MovimientoInsumo(
+            insumo=insumo, pedido=pedido, tipo_movimiento=MovimientoInsumo.Tipo.DEVOLUCION, cantidad=cantidad,
+        )
+        movimiento.full_clean()
+        movimiento.save()
+        movimientos.append(movimiento)
+    logger.info("Se devolvieron insumos del pedido %s.", pedido.pk)
+    return movimientos
+
+
 def unidades_fabricables(*, producto: Producto) -> int:
     """Calcula el máximo de unidades completas que permite la receta actual."""
     lineas = ProductoInsumo.objects.filter(producto=producto).select_related("insumo")

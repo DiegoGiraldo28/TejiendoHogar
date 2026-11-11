@@ -3,6 +3,7 @@ import struct
 import zlib
 
 from django.core.files.base import ContentFile
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -86,4 +87,6 @@ class Command(BaseCommand):
             if nombre == "Top cruzado verano" and producto.activo:
                 cambiar_estado(producto=producto)
 
+        # Los pedidos de ejemplo viven en apps.orders; se llaman por nombre para que inventory no importe orders.
+        call_command("cargar_pedidos_demo", stdout=self.stdout._out, verbosity=options.get("verbosity", 1))
         self.stdout.write(self.style.SUCCESS("Datos de demostración cargados correctamente."))
