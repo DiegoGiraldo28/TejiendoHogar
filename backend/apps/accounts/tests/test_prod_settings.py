@@ -37,3 +37,21 @@ def test_ajustes_https_segun_variable(monkeypatch, activo):
         assert not hasattr(ajustes, "CSRF_COOKIE_SECURE")
         assert not hasattr(ajustes, "SECURE_HSTS_SECONDS")
         assert not hasattr(ajustes, "SECURE_HSTS_INCLUDE_SUBDOMAINS")
+
+
+@pytest.mark.parametrize("valor", [
+    "CloudFront-Forwarded-Proto", " cloudfront-forwarded-proto ", "HTTP_CLOUDFRONT_FORWARDED_PROTO",
+])
+def test_cabecera_protocolo_proxy_configurable(monkeypatch, valor):
+    monkeypatch.setenv("SECRET_KEY", "x" * 64)
+    monkeypatch.setenv("ALLOWED_HOSTS", "ejemplo.com")
+    monkeypatch.setenv("AWS_STORAGE_BUCKET_NAME", "bucket-prueba")
+    monkeypatch.setenv("HTTPS_ACTIVO", "true")
+    monkeypatch.setenv("CABECERA_PROTOCOLO_PROXY", valor)
+
+    ruta = Path(__file__).resolve().parents[3] / "config" / "settings" / "prod.py"
+    spec = importlib.util.spec_from_file_location("config.settings.prod_prueba_cabecera", ruta)
+    ajustes = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ajustes)
+
+    assert ajustes.SECURE_PROXY_SSL_HEADER == ("HTTP_CLOUDFRONT_FORWARDED_PROTO", "https")

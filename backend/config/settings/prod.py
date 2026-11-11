@@ -6,13 +6,24 @@ DEBUG = False
 SECRET_KEY = os.environ["SECRET_KEY"]
 ALLOWED_HOSTS = [host.strip() for host in os.environ["ALLOWED_HOSTS"].split(",") if host.strip()]
 HTTPS_ACTIVO = os.environ.get("HTTPS_ACTIVO", "false").strip().lower() in {"true", "1", "yes"}
+
+
+def _clave_meta(cabecera):
+    """Convierte un nombre de cabecera HTTP («CloudFront-Forwarded-Proto») a su clave en request.META."""
+    clave = cabecera.strip().upper().replace("-", "_")
+    return clave if clave.startswith("HTTP_") else f"HTTP_{clave}"
+
+
+# Cabecera con el protocolo original que envía el proxy delante de la aplicación.
+# Un balanceador envía X-Forwarded-Proto; CloudFront la elimina y usa CloudFront-Forwarded-Proto.
+CABECERA_PROTOCOLO_PROXY = _clave_meta(os.environ.get("CABECERA_PROTOCOLO_PROXY", "X-Forwarded-Proto"))
 CSRF_TRUSTED_ORIGINS = [
     origen.strip() for origen in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if origen.strip()
 ]
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 if HTTPS_ACTIVO:
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_PROXY_SSL_HEADER = (CABECERA_PROTOCOLO_PROXY, "https")
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

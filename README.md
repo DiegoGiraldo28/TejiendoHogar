@@ -76,6 +76,7 @@ No compartas `.env`, claves ni contraseñas. Configura las variables en el entor
 | `DEFAULT_FROM_EMAIL` | Opcional | `TejiendoHogar <avisos@example.com>` | Remitente verificado en SES; reemplaza el valor de desarrollo. |
 | `HTTPS_ACTIVO` | Opcional | `false` hoy; `true` con certificado | Activa redirección HTTPS, cookies seguras, proxy HTTPS y HSTS inicial de una hora. Acepta `true`, `1` o `yes`, sin distinguir mayúsculas; por defecto `false`. |
 | `CSRF_TRUSTED_ORIGINS` | Opcional | `https://tienda.example.com,https://www.example.com` | Orígenes separados por comas, cada uno con esquema. Por defecto, lista vacía. |
+| `CABECERA_PROTOCOLO_PROXY` | Opcional | `CloudFront-Forwarded-Proto` con CloudFront | Cabecera de la que Django lee el protocolo original cuando `HTTPS_ACTIVO=true`. Por defecto `X-Forwarded-Proto` (balanceador). CloudFront elimina `X-Forwarded-Proto`, así que con CloudFront debe usarse `CloudFront-Forwarded-Proto`. |
 | `SES_SANDBOX` | Opcional | `false` (o `true` mientras la cuenta siga en sandbox) | Muestra el aviso de limitación de destinatarios verificados en la página de recuperación. Acepta `true`, `1` o `yes`; por defecto `false`. |
 
 ### Configuración del servidor
@@ -88,12 +89,20 @@ En el próximo despliegue se aplican las migraciones `accounts 0002` (tabla `int
 SELECT extname FROM pg_extension;
 ```
 
-### Activación futura de HTTPS
+### Activación de HTTPS
 
-1. Instala un certificado válido y configura el listener 443 del balanceador hacia la aplicación.
-2. Define `HTTPS_ACTIVO=true` y `CSRF_TRUSTED_ORIGINS` con los orígenes `https://` del sitio.
-3. Revisa el health check del balanceador: al activar HTTPS, su solicitud HTTP puede recibir un 301; acepta los códigos 200–399 o configura el health check por HTTPS. Confirma también que `ALLOWED_HOSTS` admite el host enviado por el health check, que puede ser la IP de la instancia.
-4. Después de comprobar que todo el sitio funciona por HTTPS, aumenta HSTS de 3600 a 31536000 segundos mediante un cambio revisado. `SECURE_HSTS_PRELOAD` permanece desactivado.
+El entorno es de instancia única (sin balanceador), así que HTTPS se ofrece con Amazon CloudFront delante de Elastic Beanstalk:
+
+1. Crea una distribución de CloudFront con origen personalizado en el dominio del entorno, protocolo de origen *Solo HTTP* (puerto 80) y certificado predeterminado `*.cloudfront.net`.
+2. En el comportamiento predeterminado usa *Redirect HTTP to HTTPS*, todos los métodos HTTP (GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE), la política de caché `CachingDisabled` y la política de solicitud de origen `AllViewerAndCloudFrontHeaders-2022-06`. Esta reenvía el `Host` real, las cookies y la cabecera `CloudFront-Forwarded-Proto`.
+3. Agrega el dominio `dxxxx.cloudfront.net` a `ALLOWED_HOSTS`, define `CSRF_TRUSTED_ORIGINS=https://dxxxx.cloudfront.net` y `CABECERA_PROTOCOLO_PROXY=CloudFront-Forwarded-Proto`, y solo entonces `HTTPS_ACTIVO=true`. Si Django no recibe el protocolo, `SECURE_SSL_REDIRECT` provoca un bucle de redirecciones (`ERR_TOO_MANY_REDIRECTS`); en ese caso vuelve `HTTPS_ACTIVO=false`.
+4. Comprueba que el enlace del correo de recuperación empieza por `https://dxxxx.cloudfront.net/`.
+
+Con un balanceador de carga y certificado de ACM, en cambio, configura el listener 443, deja `CABECERA_PROTOCOLO_PROXY` sin definir y sigue estos pasos:
+
+1. Define `HTTPS_ACTIVO=true` y `CSRF_TRUSTED_ORIGINS` con los orígenes `https://` del sitio.
+2. Revisa el health check del balanceador: al activar HTTPS, su solicitud HTTP puede recibir un 301; acepta los códigos 200–399 o configura el health check por HTTPS. Confirma también que `ALLOWED_HOSTS` admite el host enviado por el health check, que puede ser la IP de la instancia.
+En ambos casos, después de comprobar que todo el sitio funciona por HTTPS, aumenta HSTS de 3600 a 31536000 segundos mediante un cambio revisado. `SECURE_HSTS_PRELOAD` permanece desactivado.
 
 ### Verificación manual después de publicar
 
