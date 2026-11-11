@@ -11,7 +11,7 @@
     <div class="form-two-columns">{% include "partials/_field.html" with field=form.precio %}{% include "partials/_field.html" with field=form.tipo %}</div>
     {% include "partials/_field.html" with field=form.descripcion %}
     <div class="image-upload-block">{% include "partials/_field.html" with field=form.imagen %}{% if producto and producto.imagen %}<img id="vista-previa" class="image-preview" src="{{ producto.imagen.url }}" alt="Imagen actual de {{ producto.nombre }}">{% else %}<img id="vista-previa" class="image-preview" alt="Vista previa de la imagen" hidden>{% endif %}</div>
-    <div class="form-two-columns">{% include "partials/_field.html" with field=form.tiempo_produccion_dias %}</div>
+    <div class="form-two-columns" data-sobre-pedido-fields data-sobre-pedido-errors="{% if form.tiempo_produccion_dias.errors %}true{% else %}false{% endif %}">{% include "partials/_field.html" with field=form.tiempo_produccion_dias %}</div>
     <fieldset class="stock-fields" data-stock-fields data-stock-errors="{% if form.stock_producto.errors or form.stock_minimo.errors %}true{% else %}false{% endif %}"><legend>Existencias para producto disponible</legend><div class="form-two-columns">{% include "partials/_field.html" with field=form.stock_producto %}{% include "partials/_field.html" with field=form.stock_minimo %}</div></fieldset>
     <div class="form-actions"><button class="primary-button" type="submit">Guardar producto</button><a class="secondary-button button-link" href="{% url 'catalog:productos' %}">Cancelar</a></div>
   </form>

@@ -185,7 +185,8 @@ def seguimiento(request, pedido_id):
         "fecha_estimada": (
             estimar_fecha_entrega(lineas=detalles) if pedido.estado == Pedido.Estado.PENDIENTE else None
         ),
-        "paso": 3,
+        # El paso 2 solo se marca hecho con un pago Exitoso; un Pendiente sigue en el paso 2.
+        "paso": 3 if pedido.pago_simulado_estado == Pedido.PagoSimulado.EXITOSO else 2,
     })
 
 

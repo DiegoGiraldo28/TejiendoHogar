@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize static %}
+{% load humanize precios static %}
 {% block title %}Seguimiento {{ pedido.numero_visible }} | TejiendoHogar{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}"><link rel="stylesheet" href="{% static 'css/orders.css' %}">{% endblock %}
 {% block content %}
@@ -8,7 +8,7 @@
     <a class="volver-icono" href="{% url 'orders:mis_pedidos' %}"><span aria-hidden="true">←</span><span class="visually-hidden">Volver a Mis pedidos</span></a>
     <div>
       <h1>Seguimiento del pedido <span class="numero-destacado">{{ pedido.numero_visible }}</span></h1>
-      <p class="help-text">Consulta el estado de confección y los detalles de entrega de tus piezas artesanales.</p>
+      <p class="help-text">Consulta el estado de tu pedido y los detalles de entrega de tus piezas artesanales.</p>
     </div>
     <span class="pastilla estado-{{ pedido.estado|lower }}">{{ pedido.estado_cliente }}</span>
   </header>
@@ -39,8 +39,7 @@
         {% if pedido.estado == 'Pendiente' %}
         <div class="seguimiento-acciones" data-confirm-container>
           <a class="primary-button button-link" href="{% url 'orders:pago' pedido.pk %}">Continuar al pago</a>
-          <a class="secondary-button button-link" data-fallback-delete href="{% url 'orders:cancelar' pedido.pk %}">Cancelar pedido</a>
-          <button type="button" class="secondary-button" data-open-confirm hidden>Cancelar pedido</button>
+          <a class="secondary-button button-link" data-confirm-link href="{% url 'orders:cancelar' pedido.pk %}">Cancelar pedido</a>
           <dialog class="confirm-dialog" aria-labelledby="titulo-cancelar">
             <form method="post" action="{% url 'orders:cancelar' pedido.pk %}">{% csrf_token %}
               <h2 id="titulo-cancelar">¿Cancelar el pedido {{ pedido.numero_visible }}?</h2>
@@ -68,6 +67,7 @@
               <span class="etapa-texto">
                 <span class="etapa-nombre">{{ etapa.nombre }}</span>
                 {% if etapa.actual and not etapa.completado %}<span class="etapa-tag">Etapa actual</span>{% endif %}
+                <span class="etapa-descripcion">{{ etapa.descripcion }}</span>
                 <span class="etapa-fecha">{% if etapa.fecha %}{{ etapa.fecha|date:"j M, g:i A" }}{% else %}Por realizar{% endif %}</span>
               </span>
             </li>
@@ -86,13 +86,13 @@
         {% for detalle in detalles %}
         <li>
           <img class="linea-imagen-mini" src="{{ detalle.producto.imagen.url }}" alt="" width="56" height="56" loading="lazy">
-          <div><span class="linea-nombre">{{ detalle.producto.nombre }}</span><small>{{ detalle.cantidad }} unidad{{ detalle.cantidad|pluralize:"es" }}{% if detalle.origen == 'Confeccion' %} · Confección{% elif detalle.origen == 'Stock' %} · En stock{% endif %}</small></div>
-          <strong>$ {{ detalle.subtotal|floatformat:0|intcomma }} COP</strong>
+          <div><span class="linea-nombre">{{ detalle.producto.nombre }}</span><small>{{ detalle.cantidad }} unidad{{ detalle.cantidad|pluralize:"es" }}{% if detalle.origen == 'Confeccion' %} · Confección ({{ detalle.dias_produccion }} día{{ detalle.dias_produccion|pluralize }}){% elif detalle.origen == 'Stock' %} · En stock{% elif detalle.producto.tipo == 'Sobre_pedido' %} · Sobre pedido ({{ detalle.producto.tiempo_produccion_dias }} día{{ detalle.producto.tiempo_produccion_dias|pluralize }}){% else %} · En stock{% endif %}</small></div>
+          <strong>{{ detalle.subtotal|precio }}</strong>
         </li>
         {% endfor %}
       </ul>
-      <dl class="resumen-filas"><div><dt>Subtotal</dt><dd>$ {{ pedido.subtotal|floatformat:0|intcomma }} COP</dd></div></dl>
-      <div class="resumen-total"><span>{% if pedido.pago_simulado_estado == 'Exitoso' %}Total pagado{% else %}Total a pagar{% endif %}</span><strong>$ {{ pedido.subtotal|floatformat:0|intcomma }} COP</strong></div>
+      <dl class="resumen-filas"><div><dt>Subtotal</dt><dd>{{ pedido.subtotal|precio }}</dd></div></dl>
+      <div class="resumen-total"><span>{% if pedido.pago_simulado_estado == 'Exitoso' %}Total pagado{% else %}Total a pagar{% endif %}</span><strong>{{ pedido.subtotal|precio }}</strong></div>
       <a class="secondary-button button-link boton-ancho" href="{% url 'catalog:lista' %}">Volver al catálogo</a>
     </aside>
   </div>

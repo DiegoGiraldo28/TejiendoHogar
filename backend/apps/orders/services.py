@@ -19,7 +19,7 @@ from apps.inventory.services import (
 )
 from .carrito import Bolsa, validar_cantidad
 from .models import (
-    ESTADOS_ACEPTADOS, NOMBRES_ESTADO_CLIENTE, DetallePedido, HistorialEstadoPedido, Pedido, RechazoPedido,
+    ESTADOS_ACEPTADOS, DetallePedido, HistorialEstadoPedido, Pedido, RechazoPedido, nombre_estado_cliente,
 )
 from .pagos import obtener_pasarela
 
@@ -347,16 +347,34 @@ def cancelar_pedido(*, pedido: Pedido, usuario: Usuario) -> Pedido:
 
 ESTADOS_LINEA = [Estado.PENDIENTE, Estado.CONFIRMADO, Estado.EN_PREPARACION, Estado.LISTO, Estado.ENTREGADO]
 
+DESCRIPCIONES_ETAPA = {
+    Estado.PENDIENTE: "Esperamos el pago simulado para confirmar tu pedido.",
+    Estado.CONFIRMADO: "Recibimos el pago y tu pedido entró a la agenda del taller.",
+    Estado.EN_PREPARACION: "Alistamos tus piezas del inventario del taller.",
+    Estado.LISTO: "Tu pedido está empacado y listo para la entrega.",
+    Estado.ENTREGADO: "Entregamos tu pedido en la dirección indicada.",
+}
+DESCRIPCION_EN_CONFECCION = "La artesana teje a mano las piezas que se confeccionan para ti."
+
 
 def linea_de_estados(*, pedido: Pedido, para_cliente: bool = True) -> list[dict[str, Any]]:
-    """Etapas del pedido con la fecha de cada cambio tomada del historial (requiere historial precargado)."""
+    """Etapas del pedido con la fecha de cada cambio tomada del historial (requiere historial precargado).
+
+    Para la Cliente, En_preparacion se llama «En confección» solo si alguna línea tiene origen Confeccion.
+    """
     fechas = {registro.estado_nuevo: registro.fecha_cambio for registro in pedido.historial.all()}
     actual = ESTADOS_LINEA.index(pedido.estado) if pedido.estado in ESTADOS_LINEA else -1
+    con_confeccion = pedido.tiene_confeccion
     etapas = []
     for indice, estado in enumerate(ESTADOS_LINEA):
+        confeccion_visible = estado == Estado.EN_PREPARACION and con_confeccion
         etapas.append({
             "estado": estado,
-            "nombre": NOMBRES_ESTADO_CLIENTE[estado] if para_cliente else Estado(estado).label,
+            "nombre": (
+                nombre_estado_cliente(estado, con_confeccion=con_confeccion) if para_cliente
+                else Estado(estado).label
+            ),
+            "descripcion": DESCRIPCION_EN_CONFECCION if confeccion_visible else DESCRIPCIONES_ETAPA[estado],
             "fecha": fechas.get(estado),
             "completado": indice < actual or (indice == actual and estado == Estado.ENTREGADO),
             "actual": indice == actual,
@@ -365,8 +383,8 @@ def linea_de_estados(*, pedido: Pedido, para_cliente: bool = True) -> list[dict[
 
 
 def pedidos_de_cliente(*, cliente: Usuario) -> QuerySet[Pedido]:
-    """Pedidos de una Cliente, del más reciente al más antiguo."""
-    return Pedido.objects.filter(cliente=cliente).order_by("-id_pedido")
+    """Pedidos de una Cliente, del más reciente al más antiguo, con sus líneas para nombrar el estado."""
+    return Pedido.objects.filter(cliente=cliente).prefetch_related("detalles").order_by("-id_pedido")
 
 
 def obtener_pedido_de_cliente(*, cliente: Usuario, pedido_id: int) -> Pedido | None:

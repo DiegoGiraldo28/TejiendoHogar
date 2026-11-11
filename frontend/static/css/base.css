@@ -215,6 +215,18 @@ input[type="file"] {
   }
 }
 
+.salir-pc {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .salir-pc {
+    display: inline;
+    margin-left: .5rem;
+  }
+}
+
+/* Cerrar sesión en el perfil: botón secundario con la geometría del primary-button de accounts.css. */
 .logout-form {
   margin-top: 1.5rem;
   padding-top: 1.25rem;
@@ -227,16 +239,25 @@ input[type="file"] {
   justify-content: center;
   gap: .5rem;
   width: 100%;
-  min-height: 48px;
-  border: 1px solid #d8947f;
+  min-height: 50px;
+  border: 1px solid var(--borde);
   border-radius: 11px;
-  background: white;
+  background: var(--tarjeta);
   color: var(--terracota-oscuro);
   font: 600 1rem var(--fuente-cuerpo);
   cursor: pointer;
 }
 
+.logout-button:hover {
+  background: var(--perfil);
+}
+
 .logout-button:focus-visible {
   outline: 3px solid #bd593d80;
   outline-offset: 3px;
+}
+
+/* El atributo hidden siempre gana a las clases que fijan display (p. ej. .button-link). */
+[hidden] {
+  display: none !important;
 }

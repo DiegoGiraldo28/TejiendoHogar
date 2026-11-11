@@ -9,7 +9,10 @@ from django.urls import reverse
 from apps.catalog.models import Producto
 from apps.inventory.models import Insumo
 from apps.orders.models import Pedido, RechazoPedido
-from apps.orders.services import PedidoYaConfirmado, crear_pedido
+from apps.orders.services import (
+    DESCRIPCION_EN_CONFECCION, DESCRIPCIONES_ETAPA, PedidoYaConfirmado, cambiar_estado, crear_pedido,
+    pagar_y_confirmar,
+)
 from .ayudantes import DIRECCION, TELEFONO, disponible, otra_cliente, sobre_pedido
 
 BOLSA = "orders:bolsa"
@@ -408,7 +411,8 @@ def test_plantillas_tienen_atributos_de_movil_y_navegacion_de_cliente(client, cl
     detalle = client.get(reverse("catalog:detalle", args=[blusa.pk])).content.decode()
     assert 'inputmode="numeric"' in detalle
     assert 'class="tabbar"' in detalle and 'aria-label="Navegación de la cuenta"' in detalle
-    assert ">Salir<" not in detalle
+    assert 'class="inline-form salir-pc"' in detalle and ">Salir<" in detalle
+    assert detalle.count(">Salir<") == 1
     agregar(client, blusa)
     bolsa = client.get(reverse(BOLSA)).content.decode()
     assert 'autocomplete="street-address"' in bolsa
@@ -430,6 +434,108 @@ def test_perfil_tiene_boton_cerrar_sesion_y_emprendedora_conserva_salir(client, 
     client.force_login(emprendedora)
     panel = client.get(reverse("alerts:panel")).content.decode()
     assert ">Salir<" in panel and 'class="tabbar"' not in panel
+
+
+@pytest.mark.django_db
+def test_perfil_usa_estilos_de_boton_de_la_paleta(client, cliente):
+    client.force_login(cliente)
+    perfil = client.get(reverse("accounts:perfil")).content.decode()
+    assert 'class="secondary-button logout-button"' in perfil
+
+
+# --- Ajustes de la revisión de la Etapa B ---
+
+@pytest.mark.django_db
+def test_seguimiento_pendiente_muestra_un_solo_control_de_cancelar(client, cliente):
+    client.force_login(cliente)
+    agregar(client, disponible())
+    continuar(client)
+    pedido = Pedido.objects.get()
+    contenido = client.get(reverse("orders:seguimiento", args=[pedido.pk])).content.decode()
+    assert contenido.count(">Cancelar pedido</a>") == 1
+    assert "data-confirm-link" in contenido and "data-open-confirm" not in contenido
+    assert '<dialog class="confirm-dialog"' in contenido
+
+
+@pytest.mark.django_db
+def test_indicador_de_pasos_pendiente_en_paso_dos_y_pagado_en_paso_tres(client, cliente):
+    client.force_login(cliente)
+    agregar(client, disponible())
+    url_pago = continuar(client).url
+    pedido = Pedido.objects.get()
+    url = reverse("orders:seguimiento", args=[pedido.pk])
+
+    pendiente = client.get(url)
+    assert pendiente.context["paso"] == 2
+    contenido = pendiente.content.decode()
+    assert '<li class="paso-actual" aria-current="step"><span class="paso-num" aria-hidden="true">2</span>' in contenido
+    assert "<span>Simular pago</span><span class=\"visually-hidden\"> (completado)" not in contenido
+
+    client.post(url_pago, {"resultado": "fallido"})
+    assert client.get(url).context["paso"] == 2
+
+    client.post(url_pago, {"resultado": "exitoso"})
+    pagado = client.get(url)
+    assert pagado.context["paso"] == 3
+    assert "<span>Simular pago</span><span class=\"visually-hidden\"> (completado)" in pagado.content.decode()
+
+
+def _pedido_en_preparacion(cliente, emprendedora, lineas):
+    pedido = crear_pedido(cliente=cliente, lineas=lineas, direccion=DIRECCION, telefono=TELEFONO)
+    pagar_y_confirmar(pedido=pedido, simular_exito=True, usuario=cliente)
+    return cambiar_estado(pedido=pedido, nuevo_estado=Pedido.Estado.EN_PREPARACION, usuario=emprendedora)
+
+
+@pytest.mark.django_db
+def test_en_preparacion_se_llama_en_confeccion_si_alguna_linea_se_confecciona(client, cliente, emprendedora):
+    pedido = _pedido_en_preparacion(cliente, emprendedora, [
+        {"producto": disponible(), "cantidad": 1},
+        {"producto": sobre_pedido(dias=4, requerido="1"), "cantidad": 1},
+    ])
+    client.force_login(cliente)
+    respuesta = client.get(reverse("orders:seguimiento", args=[pedido.pk]))
+    etapa = respuesta.context["etapas"][2]
+    assert etapa["nombre"] == "En confección" and etapa["actual"]
+    assert etapa["descripcion"] == DESCRIPCION_EN_CONFECCION
+    contenido = respuesta.content.decode()
+    assert "Confección (4 días)" in contenido and "En stock" in contenido
+    assert "En confección" in client.get(reverse("orders:mis_pedidos")).content.decode()
+    assert Pedido.objects.get(pk=pedido.pk).estado == Pedido.Estado.EN_PREPARACION
+
+
+@pytest.mark.django_db
+def test_en_preparacion_se_llama_en_preparacion_si_todo_sale_del_stock(client, cliente, emprendedora):
+    pedido = _pedido_en_preparacion(cliente, emprendedora, [{"producto": disponible(dias=3), "cantidad": 2}])
+    assert Pedido.objects.get(pk=pedido.pk).estado == "En_preparacion"
+    client.force_login(cliente)
+    respuesta = client.get(reverse("orders:seguimiento", args=[pedido.pk]))
+    etapa = respuesta.context["etapas"][2]
+    assert etapa["nombre"] == "En preparación"
+    assert etapa["descripcion"] == DESCRIPCIONES_ETAPA[Pedido.Estado.EN_PREPARACION]
+    contenido = respuesta.content.decode()
+    assert "En confección" not in contenido and "día" not in contenido.split("Resumen de compra")[1]
+    lista = client.get(reverse("orders:mis_pedidos")).content.decode()
+    assert "En preparación" in lista and "En confección" not in lista
+
+
+@pytest.mark.django_db
+def test_precios_del_proceso_de_pedidos_usan_el_formato_del_catalogo(client, cliente):
+    blusa = disponible(precio="45000")
+    client.force_login(cliente)
+    agregar(client, blusa, 2)
+    paginas = [client.get(reverse(BOLSA))]
+    url_pago = continuar(client).url
+    pedido = Pedido.objects.get()
+    paginas.append(client.get(url_pago))
+    paginas.append(client.get(reverse("orders:cancelar", args=[pedido.pk])))
+    paginas.append(client.get(reverse("orders:mis_pedidos")))
+    client.post(url_pago, {"resultado": "exitoso"})
+    paginas.append(client.get(reverse("orders:seguimiento", args=[pedido.pk])))
+    paginas.append(client.get(reverse("catalog:detalle", args=[blusa.pk])))
+    for pagina in paginas:
+        contenido = pagina.content.decode()
+        assert "$90.000 COP" in contenido or "$45.000 COP" in contenido
+        assert "$ " not in contenido and "90,000" not in contenido
 
 
 @pytest.mark.django_db

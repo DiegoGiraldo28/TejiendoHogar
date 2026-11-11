@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize static %}
+{% load precios static %}
 {% block title %}Bolsa de compra | TejiendoHogar{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}"><link rel="stylesheet" href="{% static 'css/orders.css' %}">{% endblock %}
 {% block body_class %}{% if lineas %}con-barra-accion{% endif %}{% endblock %}
@@ -30,7 +30,7 @@
           <img class="linea-imagen" src="{{ linea.producto.imagen.url }}" alt="" width="96" height="96" loading="lazy">
           <div class="linea-info">
             <h3>{{ linea.producto.nombre }}</h3>
-            <p class="linea-precio">$ {{ linea.precio|floatformat:0|intcomma }} <small>COP</small></p>
+            <p class="linea-precio">{{ linea.precio|precio }}</p>
             <p class="linea-origen {% if linea.producto.tipo == 'Sobre_pedido' %}origen-pedido{% else %}origen-stock{% endif %}">{% if linea.producto.tipo == 'Disponible' %}En stock en taller{% else %}Sobre pedido ({{ linea.producto.tiempo_produccion_dias }} día{{ linea.producto.tiempo_produccion_dias|pluralize }}){% endif %}</p>
           </div>
           <button class="linea-quitar" type="submit" name="accion" value="quitar:{{ linea.producto.pk }}" formnovalidate><span aria-hidden="true">×</span> Quitar<span class="visually-hidden"> {{ linea.producto.nombre }}</span></button>
@@ -61,10 +61,10 @@
     <aside class="tarjeta resumen-pedido" aria-labelledby="titulo-resumen">
       <h2 id="titulo-resumen" class="tarjeta-titulo">Resumen del pedido</h2>
       <dl class="resumen-filas">
-        <div><dt>Subtotal ({{ unidades }} producto{{ unidades|pluralize }})</dt><dd>$ {{ total|floatformat:0|intcomma }} COP</dd></div>
+        <div><dt>Subtotal ({{ unidades }} producto{{ unidades|pluralize }})</dt><dd>{{ total|precio }}</dd></div>
         <div><dt>Fecha estimada de entrega</dt><dd>{{ fecha_estimada|date:"j \d\e F \d\e Y" }}</dd></div>
       </dl>
-      <div class="resumen-total"><span>Total a pagar</span><strong>$ {{ total|floatformat:0|intcomma }} COP</strong></div>
+      <div class="resumen-total"><span>Total a pagar</span><strong>{{ total|precio }}</strong></div>
       <p class="help-text">La fecha es una estimación con la cola actual del taller; se fija al confirmar el pago.</p>
       <div class="barra-accion">
         <button class="primary-button" type="submit" name="accion" value="continuar">Continuar a simular pago <span aria-hidden="true">→</span></button>

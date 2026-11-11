@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize static %}
+{% load precios static %}
 {% block title %}Simular pago {{ pedido.numero_visible }} | TejiendoHogar{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}"><link rel="stylesheet" href="{% static 'css/orders.css' %}">{% endblock %}
 {% block body_class %}con-barra-accion barra-doble{% endblock %}
@@ -38,15 +38,15 @@
         <li>
           <img class="linea-imagen-mini" src="{{ detalle.producto.imagen.url }}" alt="" width="56" height="56" loading="lazy">
           <div><span class="linea-nombre">{{ detalle.producto.nombre }}</span><small>Cant: {{ detalle.cantidad }}</small></div>
-          <strong>$ {{ detalle.subtotal|floatformat:0|intcomma }} COP</strong>
+          <strong>{{ detalle.subtotal|precio }}</strong>
         </li>
         {% endfor %}
       </ul>
       <dl class="resumen-filas">
-        <div><dt>Subtotal productos</dt><dd>$ {{ pedido.subtotal|floatformat:0|intcomma }} COP</dd></div>
+        <div><dt>Subtotal productos</dt><dd>{{ pedido.subtotal|precio }}</dd></div>
         <div><dt>Fecha estimada de entrega</dt><dd>{{ fecha_estimada|date:"j \d\e F \d\e Y" }}</dd></div>
       </dl>
-      <div class="resumen-total"><span>Total a simular</span><strong>$ {{ pedido.subtotal|floatformat:0|intcomma }} COP</strong></div>
+      <div class="resumen-total"><span>Total a simular</span><strong>{{ pedido.subtotal|precio }}</strong></div>
     </aside>
 
     <form method="post" class="tarjeta pago-form" id="pagar" data-un-envio>

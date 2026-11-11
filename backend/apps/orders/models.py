@@ -38,11 +38,19 @@ ESTADOS_ACEPTADOS = [Estado.CONFIRMADO, Estado.EN_PREPARACION, Estado.LISTO, Est
 NOMBRES_ESTADO_CLIENTE = {
     Estado.PENDIENTE: "En espera de pago",
     Estado.CONFIRMADO: "Confirmado",
-    Estado.EN_PREPARACION: "En confección",
+    Estado.EN_PREPARACION: "En preparación",
     Estado.LISTO: "Listo y empaque",
     Estado.ENTREGADO: "Entregado",
     Estado.CANCELADO: "Cancelado",
 }
+NOMBRE_EN_CONFECCION = "En confección"
+
+
+def nombre_estado_cliente(estado: str, *, con_confeccion: bool) -> str:
+    """Nombre que ve la Cliente; En_preparacion se llama «En confección» si alguna línea se confecciona."""
+    if estado == Estado.EN_PREPARACION and con_confeccion:
+        return NOMBRE_EN_CONFECCION
+    return NOMBRES_ESTADO_CLIENTE[estado]
 
 
 class Pedido(models.Model):
@@ -129,9 +137,16 @@ class Pedido(models.Model):
         return f"#TH-{self.id_pedido:04d}"
 
     @property
+    def tiene_confeccion(self) -> bool:
+        """True si alguna línea se confecciona (usa los detalles precargados si existen)."""
+        return any(detalle.origen == Origen.CONFECCION for detalle in self.detalles.all())
+
+    @property
     def estado_cliente(self) -> str:
         """Nombre del estado que ve la Cliente en el seguimiento."""
-        return NOMBRES_ESTADO_CLIENTE[self.estado]
+        if self.estado != Estado.EN_PREPARACION:
+            return NOMBRES_ESTADO_CLIENTE[self.estado]
+        return nombre_estado_cliente(self.estado, con_confeccion=self.tiene_confeccion)
 
     @property
     def estado_emprendedora(self) -> str:

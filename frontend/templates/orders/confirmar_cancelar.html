@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize static %}
+{% load precios static %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}">{% endblock %}
 {% block title %}Cancelar pedido {{ pedido.numero_visible }} | TejiendoHogar{% endblock %}
-{% block content %}<section class="content-card"><h1>Cancelar pedido {{ pedido.numero_visible }}</h1><p>¿Seguro que quieres cancelar este pedido de $ {{ pedido.subtotal|floatformat:0|intcomma }} COP?</p><p>El pedido aún no se ha pagado, así que no se cobra nada. Esta acción no se puede deshacer.</p><form method="post">{% csrf_token %}<button class="danger-button" type="submit">Sí, cancelar pedido</button> <a class="secondary-button button-link" href="{% url 'orders:seguimiento' pedido.pk %}">Volver</a></form></section>{% endblock %}
+{% block content %}<section class="content-card"><h1>Cancelar pedido {{ pedido.numero_visible }}</h1><p>¿Seguro que quieres cancelar este pedido de {{ pedido.subtotal|precio }}?</p><p>El pedido aún no se ha pagado, así que no se cobra nada. Esta acción no se puede deshacer.</p><form method="post">{% csrf_token %}<button class="danger-button" type="submit">Sí, cancelar pedido</button> <a class="secondary-button button-link" href="{% url 'orders:seguimiento' pedido.pk %}">Volver</a></form></section>{% endblock %}

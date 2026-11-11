@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize static inventario %}
+{% load precios static inventario %}
 {% block title %}{{ producto.nombre }} | TejiendoHogar{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}">{% endblock %}
 {% block content %}
@@ -17,7 +17,7 @@
         <span class="badge badge-success">Disponible</span>
       {% endif %}
       <h1>{{ producto.nombre }}</h1>
-      <p class="customer-price detail-price">$ {{ producto.precio|floatformat:0|intcomma }} <small>COP</small></p>
+      <p class="customer-price detail-price">{{ producto.precio|precio }}</p>
       {% if producto.tipo == 'Sobre_pedido' %}
         <p class="detail-elaboracion"><strong>Elaboración artesanal:</strong> se confecciona en {{ producto.tiempo_produccion_dias }} día{{ producto.tiempo_produccion_dias|pluralize }} por unidad.</p>
       {% endif %}
@@ -50,7 +50,7 @@
           </div>
           <div class="compra-acciones">
             <button class="icon-button" type="submit" name="accion" value="agregar" aria-label="Agregar a la bolsa" title="Agregar a la bolsa"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><path d="M12 11v6M9 14h6"/></svg></button>
-            <button class="primary-button" type="submit" name="accion" value="comprar">Comprar ahora • $ {{ producto.precio|floatformat:0|intcomma }}</button>
+            <button class="primary-button" type="submit" name="accion" value="comprar">Comprar ahora • {{ producto.precio|precio }}</button>
           </div>
           {% if not user.is_authenticated %}<p class="stock-note"><a href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Inicia sesión</a> para comprar; volverás a este producto.</p>{% endif %}
         </form>

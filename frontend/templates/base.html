@@ -24,6 +24,7 @@
         <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
         <span class="visually-hidden">Mi perfil</span>
       </a>
+      <form method="post" action="{% url 'accounts:logout' %}" class="inline-form salir-pc">{% csrf_token %}<button type="submit" class="nav-button">Salir</button></form>
     </div>
   </nav>
   {% else %}

@@ -643,6 +643,16 @@
   text-transform: uppercase;
 }
 
+.etapa-descripcion {
+  color: var(--texto);
+  font-size: .86rem;
+  line-height: 1.35;
+}
+
+.etapa:not(.etapa-hecha):not(.etapa-actual) .etapa-descripcion {
+  color: var(--suave);
+}
+
 .etapa-fecha {
   color: var(--suave);
   font-size: .82rem;
@@ -813,5 +823,9 @@
 
   .etapa-nombre {
     font-size: .92rem;
+  }
+
+  .etapa-descripcion {
+    font-size: .8rem;
   }
 }

@@ -150,6 +150,23 @@ def test_catalogo_tiene_consultas_constantes_y_responde_antes_de_dos_segundos(cl
 
 
 @pytest.mark.django_db
+def test_precio_con_formato_unico_y_dias_solo_para_sobre_pedido(client):
+    disponible = crear_producto_publico(1)
+    encargo = crear_producto_publico(2, tipo=Producto.Tipo.SOBRE_PEDIDO)
+    Producto.objects.filter(pk=encargo.pk).update(precio=Decimal("1289000"))
+
+    lista = client.get(reverse("catalog:lista")).content.decode()
+    assert "$45.000 COP" in lista and "$1.289.000 COP" in lista
+    assert lista.count("se confecciona en") == 1
+
+    detalle_disponible = client.get(reverse("catalog:detalle", args=[disponible.pk])).content.decode()
+    assert "$45.000 COP" in detalle_disponible
+    assert "Elaboración artesanal" not in detalle_disponible
+    detalle_encargo = client.get(reverse("catalog:detalle", args=[encargo.pk])).content.decode()
+    assert "Elaboración artesanal" in detalle_encargo
+
+
+@pytest.mark.django_db
 def test_nombre_con_script_se_muestra_escapado(client):
     crear_producto_prueba(
         nombre="<script>alert(1)</script>", descripcion="Prenda artesanal hecha a mano",

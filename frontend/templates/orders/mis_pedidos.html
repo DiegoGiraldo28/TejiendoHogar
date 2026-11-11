@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize static %}
+{% load precios static %}
 {% block title %}Mis pedidos | TejiendoHogar{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/catalog.css' %}"><link rel="stylesheet" href="{% static 'css/orders.css' %}">{% endblock %}
 {% block content %}
@@ -17,7 +17,7 @@
         </div>
         <dl class="pedido-item-datos">
           <div><dt>Fecha</dt><dd>{{ pedido.fecha_creacion|date:"j M Y" }}</dd></div>
-          <div><dt>Total</dt><dd>$ {{ pedido.subtotal|floatformat:0|intcomma }} COP</dd></div>
+          <div><dt>Total</dt><dd>{{ pedido.subtotal|precio }}</dd></div>
           <div><dt>Entrega estimada</dt><dd>{% if pedido.fecha_estimada_entrega %}{{ pedido.fecha_estimada_entrega|date:"j M Y" }}{% elif pedido.estado == 'Pendiente' %}Al confirmar el pago{% else %}—{% endif %}</dd></div>
         </dl>
         <div class="pedido-item-acciones">

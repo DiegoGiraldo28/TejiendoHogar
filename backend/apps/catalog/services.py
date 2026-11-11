@@ -6,7 +6,8 @@ from django.core.exceptions import ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.models import Count, QuerySet
 
-from .models import Producto
+from .models import DIAS_PRODUCCION_DISPONIBLE, Producto
+
 PRODUCTOS_PUBLICOS_FIELDS = (
     "id_producto", "nombre", "precio", "imagen", "tipo", "tiempo_produccion_dias", "stock_producto",
 )
@@ -14,13 +15,19 @@ PRODUCTOS_PUBLICOS_FIELDS = (
 logger = logging.getLogger(__name__)
 
 
+def _dias_produccion(*, tipo: str, tiempo_produccion_dias: int | None) -> int | None:
+    """Los días de confección solo aplican a Sobre pedido; un Disponible guarda 1 por la restricción."""
+    return DIAS_PRODUCCION_DISPONIBLE if tipo == Producto.Tipo.DISPONIBLE else tiempo_produccion_dias
+
+
 def crear_producto(*, nombre: str, descripcion: str, precio: Any, imagen: Any, tipo: str,
-                   tiempo_produccion_dias: int, stock_producto: int = 0, stock_minimo: int = 0) -> Producto:
+                   tiempo_produccion_dias: int | None = None, stock_producto: int = 0,
+                   stock_minimo: int = 0) -> Producto:
     """Valida y crea un producto. Devuelve Producto o lanza ValidationError."""
     activo = tipo == Producto.Tipo.DISPONIBLE
     producto = Producto(
         nombre=nombre, descripcion=descripcion, precio=precio, imagen=imagen, tipo=tipo,
-        tiempo_produccion_dias=tiempo_produccion_dias,
+        tiempo_produccion_dias=_dias_produccion(tipo=tipo, tiempo_produccion_dias=tiempo_produccion_dias),
         stock_producto=stock_producto if activo else 0, stock_minimo=stock_minimo, activo=activo,
     )
     try:
@@ -34,15 +41,15 @@ def crear_producto(*, nombre: str, descripcion: str, precio: Any, imagen: Any, t
 
 
 def actualizar_producto(*, producto: Producto, nombre: str, descripcion: str, precio: Any, tipo: str,
-                        tiempo_produccion_dias: int, stock_producto: int = 0, stock_minimo: int = 0,
-                        imagen: Any = None) -> Producto:
+                        tiempo_produccion_dias: int | None = None, stock_producto: int = 0,
+                        stock_minimo: int = 0, imagen: Any = None) -> Producto:
     """Actualiza los campos del producto y elimina la imagen reemplazada."""
     imagen_anterior = producto.imagen.name
     producto.nombre = nombre
     producto.descripcion = descripcion
     producto.precio = precio
     producto.tipo = tipo
-    producto.tiempo_produccion_dias = tiempo_produccion_dias
+    producto.tiempo_produccion_dias = _dias_produccion(tipo=tipo, tiempo_produccion_dias=tiempo_produccion_dias)
     producto.stock_producto = stock_producto if tipo == Producto.Tipo.DISPONIBLE else 0
     producto.stock_minimo = stock_minimo
     if imagen:

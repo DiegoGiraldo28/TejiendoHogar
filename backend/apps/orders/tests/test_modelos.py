@@ -129,7 +129,7 @@ def test_numero_visible_y_nombres_de_estado(cliente):
     assert pedido.estado_cliente == "En espera de pago"
     assert pedido.estado_emprendedora == "Pendiente"
     pedido.estado = Pedido.Estado.EN_PREPARACION
-    assert pedido.estado_cliente == "En confección"
+    assert pedido.estado_cliente == "En preparación"  # sin líneas de Confeccion
     assert pedido.estado_emprendedora == "En preparación"
     pedido.estado = Pedido.Estado.LISTO
     assert pedido.estado_cliente == "Listo y empaque"
