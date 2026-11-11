@@ -2,3 +2,432 @@
 .registration-title{margin:0;text-align:center;font:700 1.5rem var(--fuente-titulo)}.registration-subtitle{margin:-.6rem 0 .25rem;text-align:center;color:var(--suave)}.legal-disclaimer{margin:0;color:var(--suave);font-size:.85rem;text-align:center}
 .password-control{position:relative}.password-control .form-field input{padding-right:3.25rem}.password-control .password-toggle{top:2.1rem;right:.5rem;bottom:auto;display:grid;place-items:center;width:34px;height:34px;padding:.35rem;border-radius:8px}.password-toggle:hover{background:var(--perfil);color:var(--terracota-oscuro)}.password-toggle:focus-visible{outline:3px solid #bd593d80;outline-offset:1px}.eye-icon{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.eye-icon.is-hidden{display:none}.password-reset-link{justify-self:end;margin-top:-.85rem;font-size:.88rem}
 @media(min-width:600px){.auth-shell{margin:4rem auto}.auth-card{padding:1.8rem}}
+
+/* Perfil (Cliente y Emprendedora): mockups 08 (móvil) y 04 (PC). Una columna en móvil, dos en PC. */
+.perfil-wrap {
+  display: grid;
+  gap: 1rem;
+  width: min(100% - 2rem, 800px);
+  margin: 1.5rem auto 2.5rem;
+}
+
+.perfil-titulo {
+  margin: 0;
+  font: 700 clamp(1.6rem, 5vw, 2.2rem) var(--fuente-titulo);
+}
+
+.perfil-tarjeta {
+  padding: 1.25rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-tarjeta);
+  background: var(--tarjeta);
+  box-shadow: 0 8px 28px #563a2810;
+}
+
+.perfil-encabezado {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.perfil-iniciales {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border: 2px solid #e2bfb2;
+  border-radius: 50%;
+  background: var(--perfil);
+  color: var(--terracota-oscuro);
+  font: 700 1.4rem var(--fuente-titulo);
+}
+
+.perfil-identidad {
+  display: grid;
+  gap: .15rem;
+  min-width: 0;
+}
+
+.perfil-identidad p {
+  margin: 0;
+}
+
+.perfil-nombre {
+  font: 700 1.2rem var(--fuente-titulo);
+}
+
+.perfil-correo {
+  color: var(--suave);
+  font-size: .9rem;
+  overflow-wrap: anywhere;
+}
+
+.perfil-rol {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  justify-self: start;
+  margin-top: .2rem;
+  padding: .15rem .6rem;
+  border-radius: 999px;
+  background: #e4f2e9;
+  color: var(--ok);
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.perfil-form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.perfil-seccion {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.perfil-seccion legend {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  width: 100%;
+  margin-bottom: 1rem;
+  padding-bottom: .6rem;
+  border-bottom: 1px solid var(--borde);
+  font: 700 1.15rem var(--fuente-titulo);
+}
+
+.perfil-seccion legend svg {
+  color: var(--terracota);
+}
+
+.perfil-campos {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.perfil-campos .form-field label {
+  font-size: .85rem;
+}
+
+.perfil-campos input {
+  background: #fbf8f6;
+}
+
+.perfil-campos input[readonly] {
+  background: #f3eeeb;
+  color: var(--suave);
+}
+
+.perfil-campos .help-text {
+  color: var(--suave);
+  font-size: .8rem;
+}
+
+.perfil-campos .field-error {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.perfil-acciones .perfil-guardar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+}
+
+.perfil-wrap .logout-form {
+  margin-top: 0;
+  padding-top: .5rem;
+  border-top: 0;
+}
+
+@media (min-width: 900px) {
+  .perfil-tarjeta {
+    padding: 2rem 2.5rem;
+  }
+
+  .perfil-campos {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .perfil-campo-ancho {
+    grid-column: 1 / -1;
+  }
+
+  .perfil-acciones {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--borde);
+  }
+
+  .perfil-acciones .perfil-guardar {
+    width: auto;
+    padding: 0 2.5rem;
+  }
+
+  .perfil-wrap .logout-form {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .perfil-wrap .logout-button {
+    width: auto;
+    padding: 0 1.5rem;
+  }
+}
+
+/* Perfil de la Emprendedora («Mi perfil y taller»): estilos acotados a .perfil-taller. */
+.perfil-taller {
+  width: min(100% - 2rem, 1100px);
+  margin: 1.75rem auto 2.5rem;
+}
+
+.perfil-taller-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: .75rem 2rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.perfil-taller-cabecera h1 {
+  margin: .5rem 0 0;
+  font: 700 clamp(1.7rem, 4vw, 2.4rem) var(--fuente-titulo);
+}
+
+.perfil-taller-cabecera p {
+  max-width: 360px;
+  margin: 0;
+  color: var(--suave);
+}
+
+.perfil-taller-pastilla {
+  display: inline-block;
+  padding: .2rem .7rem;
+  border-radius: 999px;
+  background: var(--perfil);
+  color: var(--terracota-oscuro);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.perfil-taller-columnas {
+  display: grid;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.perfil-taller-tarjeta {
+  padding: 1.5rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-tarjeta);
+  background: var(--tarjeta);
+  box-shadow: 0 8px 28px #563a2810;
+}
+
+.perfil-taller-identidad {
+  display: grid;
+  justify-items: center;
+  gap: .5rem;
+  text-align: center;
+}
+
+.perfil-taller-avatar {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border: 3px solid var(--tarjeta);
+  border-radius: 50%;
+  background: var(--perfil);
+  box-shadow: 0 0 0 2px #e2bfb2;
+  color: var(--terracota-oscuro);
+  font: 700 2rem var(--fuente-titulo);
+}
+
+.perfil-taller-identidad h2 {
+  margin: .5rem 0 0;
+  font: 700 1.5rem var(--fuente-titulo);
+  overflow-wrap: anywhere;
+}
+
+.perfil-taller-rol {
+  padding: .15rem .75rem;
+  border-radius: 999px;
+  background: var(--perfil);
+  color: var(--terracota-oscuro);
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.perfil-taller-datos {
+  display: grid;
+  gap: .75rem;
+  width: 100%;
+  margin: 1rem 0 0;
+  padding: 1rem;
+  border-radius: 12px;
+  background: var(--fondo);
+  text-align: left;
+}
+
+.perfil-taller-datos div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.perfil-taller-datos dt {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  color: var(--suave);
+}
+
+.perfil-taller-datos dt svg {
+  color: var(--terracota);
+}
+
+.perfil-taller-datos dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.perfil-taller-form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.perfil-taller-form-cabecera {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.perfil-taller-form-cabecera > svg {
+  flex: none;
+  margin-top: .2rem;
+  color: var(--terracota);
+}
+
+.perfil-taller-form-cabecera h2 {
+  margin: 0;
+  font: 700 1.25rem var(--fuente-titulo);
+}
+
+.perfil-taller-form-cabecera p {
+  margin: .2rem 0 0;
+  color: var(--suave);
+  font-size: .92rem;
+}
+
+.perfil-taller-campos {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.perfil-taller-campos .form-field label {
+  color: var(--suave);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.perfil-taller-campos input {
+  background: #fbf8f6;
+}
+
+.perfil-taller-campos input[readonly] {
+  background: #f3eeeb;
+  color: var(--suave);
+}
+
+.perfil-taller-campos .help-text {
+  color: var(--suave);
+  font-size: .8rem;
+}
+
+.perfil-taller-campos .field-error {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.campo-con-icono {
+  position: relative;
+  display: block;
+}
+
+.campo-con-icono svg {
+  position: absolute;
+  top: 50%;
+  left: .85rem;
+  color: var(--suave);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.perfil-taller .campo-con-icono input {
+  padding-left: 2.6rem;
+}
+
+.perfil-taller-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--borde);
+}
+
+.perfil-taller-acciones .primary-button,
+.perfil-taller-acciones .secondary-button {
+  width: auto;
+  min-width: 140px;
+  min-height: 48px;
+  padding: 0 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .perfil-taller-columnas {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+
+  .perfil-taller-tarjeta {
+    padding: 2rem;
+  }
+
+  .perfil-taller-campos {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .perfil-taller-ancho {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 559px) {
+  .perfil-taller-acciones .primary-button,
+  .perfil-taller-acciones .secondary-button {
+    flex: 1 1 100%;
+  }
+}

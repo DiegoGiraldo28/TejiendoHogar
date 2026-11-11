@@ -10,7 +10,7 @@ from django.utils import timezone
 from apps.inventory.models import Insumo, MovimientoInsumo
 from apps.orders.models import DetallePedido, HistorialEstadoPedido, Pedido, RechazoPedido
 from apps.orders.services import crear_pedido
-from .ayudantes import DIRECCION, TELEFONO, disponible
+from .ayudantes import DIRECCION, TELEFONO, disponible, sobre_pedido
 
 AHORA = timezone.now()
 
@@ -155,3 +155,20 @@ def test_trigger_hace_inmutable_el_historial(cliente):
     with pytest.raises(DatabaseError, match="inmutable"), transaction.atomic():
         HistorialEstadoPedido.objects.filter(pk=registro.pk).delete()
     assert HistorialEstadoPedido.objects.filter(pk=registro.pk, estado_nuevo=Pedido.Estado.PENDIENTE).exists()
+
+
+@pytest.mark.django_db
+def test_nombre_de_en_preparacion_antes_de_confirmar_usa_el_tipo_de_producto(cliente):
+    """Un Pendiente aún no tiene origen: decide el tipo del producto (Sobre pedido = confección)."""
+    solo_stock = crear_pedido(cliente=cliente, lineas=[{"producto": disponible(), "cantidad": 1}],
+                              direccion=DIRECCION, telefono=TELEFONO)
+    mixto = crear_pedido(cliente=cliente, lineas=[
+        {"producto": disponible(nombre="Gorro"), "cantidad": 1}, {"producto": sobre_pedido(), "cantidad": 1},
+    ], direccion=DIRECCION, telefono=TELEFONO)
+    assert not solo_stock.tiene_confeccion and mixto.tiene_confeccion
+    assert mixto.detalles.filter(origen__isnull=True).count() == 2
+    for pedido, nombre in ((solo_stock, "En preparación"), (mixto, "En confección")):
+        assert pedido.nombre_de_estado(Pedido.Estado.EN_PREPARACION, para_cliente=True) == nombre
+        assert pedido.nombre_de_estado(Pedido.Estado.EN_PREPARACION, para_cliente=False) == nombre
+    assert mixto.nombre_de_estado(Pedido.Estado.PENDIENTE, para_cliente=True) == "En espera de pago"
+    assert mixto.nombre_de_estado(Pedido.Estado.PENDIENTE, para_cliente=False) == "Pendiente"

@@ -233,7 +233,7 @@ input[type="file"] {
   border-top: 1px solid var(--borde);
 }
 
-.logout-button {
+.logout-form .logout-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -248,11 +248,11 @@ input[type="file"] {
   cursor: pointer;
 }
 
-.logout-button:hover {
+.logout-form .logout-button:hover {
   background: var(--perfil);
 }
 
-.logout-button:focus-visible {
+.logout-form .logout-button:focus-visible {
   outline: 3px solid #bd593d80;
   outline-offset: 3px;
 }
@@ -260,4 +260,82 @@ input[type="file"] {
 /* El atributo hidden siempre gana a las clases que fijan display (p. ej. .button-link). */
 [hidden] {
   display: none !important;
+}
+
+/* Botones y diálogo de confirmación compartidos por todas las pantallas (antes solo en catalog.css,
+   por eso Insumos los mostraba sin estilo). .primary-button sigue en accounts.css y catalog.css. */
+.secondary-button,
+.danger-button {
+  min-height: 44px;
+  padding: .65rem 1rem;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary-button {
+  border: 1px solid var(--borde);
+  background: var(--tarjeta);
+  color: var(--texto);
+}
+
+.secondary-button:hover {
+  background: var(--perfil);
+}
+
+.danger-button {
+  border: 1px solid var(--error, #a22e27);
+  background: var(--error, #a22e27);
+  color: white;
+}
+
+.danger-button:hover {
+  filter: brightness(.92);
+}
+
+.text-button {
+  padding: .5rem .25rem;
+  border: 0;
+  background: transparent;
+  color: var(--terracota-oscuro);
+  font: inherit;
+  cursor: pointer;
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.secondary-button:focus-visible,
+.danger-button:focus-visible,
+.text-button:focus-visible {
+  outline: 3px solid #bd593d80;
+  outline-offset: 2px;
+}
+
+.confirm-dialog {
+  width: min(92vw, 440px);
+  border: 0;
+  border-radius: var(--radio-tarjeta);
+  box-shadow: 0 12px 45px #1b0d0a55;
+}
+
+.confirm-dialog::backdrop {
+  background: #30231f88;
+}
+
+.confirm-dialog form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .75rem;
+}
+
+.confirm-dialog h2,
+.confirm-dialog p {
+  flex-basis: 100%;
 }

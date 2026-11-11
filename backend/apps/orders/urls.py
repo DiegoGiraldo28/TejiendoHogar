@@ -2,10 +2,15 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
-from . import views
+from . import views, views_emprendedora
 
 app_name = "orders"
 urlpatterns = [
+    path("emprendedora/pedidos/", views_emprendedora.gestion_pedidos, name="gestion"),
+    path("emprendedora/pedidos/<int:pedido_id>/", views_emprendedora.gestion_pedido, name="gestion_pedido"),
+    path("emprendedora/pedidos/<int:pedido_id>/avanzar/", views_emprendedora.avanzar_pedido, name="avanzar"),
+    path("emprendedora/pedidos/<int:pedido_id>/cancelar/", views_emprendedora.cancelar_pedido_gestion,
+         name="gestion_cancelar"),
     path("carrito/", views.bolsa, name="bolsa"),
     path("carrito/agregar/<int:producto_id>/", views.bolsa_agregar, name="bolsa_agregar"),
     path("pedidos/<int:pedido_id>/pago/", views.pago, name="pago"),

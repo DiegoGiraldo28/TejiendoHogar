@@ -1,25 +1,26 @@
 """Reglas de negocio del proceso de pedidos con pago simulado."""
 import logging
+import re
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any, Iterable
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import F, Prefetch, QuerySet, Sum
+from django.db.models import Count, F, Prefetch, Q, QuerySet, Sum
 from django.utils import timezone
 
 from apps.accounts.models import Usuario
 from apps.catalog.models import Producto
 from apps.common.constants import DIAS_ALISTAMIENTO
 from apps.common.validators import validar_telefono
-from apps.inventory.models import Insumo, ProductoInsumo
+from apps.inventory.models import Insumo, MovimientoInsumo, ProductoInsumo
 from apps.inventory.services import (
     calcular_requerimiento, descontar_insumos, devolver_insumos, validar_disponibilidad,
 )
 from .carrito import Bolsa, validar_cantidad
 from .models import (
-    ESTADOS_ACEPTADOS, DetallePedido, HistorialEstadoPedido, Pedido, RechazoPedido, nombre_estado_cliente,
+    ESTADOS_ACEPTADOS, DetallePedido, HistorialEstadoPedido, Pedido, RechazoPedido, nombre_estado,
 )
 from .pagos import obtener_pasarela
 
@@ -101,6 +102,12 @@ def _registrar_historial(*, pedido: Pedido, usuario: Usuario, anterior: str | No
     HistorialEstadoPedido.objects.create(
         pedido=pedido, usuario=usuario, estado_anterior=anterior, estado_nuevo=pedido.estado,
     )
+
+
+def piezas_entregadas() -> int:
+    """Suma de las cantidades de las líneas de pedidos Entregados, en una sola consulta."""
+    total = DetallePedido.objects.filter(pedido__estado=Estado.ENTREGADO).aggregate(total=Sum("cantidad"))["total"]
+    return int(total or 0)
 
 
 def dias_en_cola() -> int:
@@ -350,17 +357,18 @@ ESTADOS_LINEA = [Estado.PENDIENTE, Estado.CONFIRMADO, Estado.EN_PREPARACION, Est
 DESCRIPCIONES_ETAPA = {
     Estado.PENDIENTE: "Esperamos el pago simulado para confirmar tu pedido.",
     Estado.CONFIRMADO: "Recibimos el pago y tu pedido entró a la agenda del taller.",
-    Estado.EN_PREPARACION: "Alistamos tus piezas del inventario del taller.",
+    Estado.EN_PREPARACION: "La emprendedora está alistando y empacando tu pedido.",
     Estado.LISTO: "Tu pedido está empacado y listo para la entrega.",
     Estado.ENTREGADO: "Entregamos tu pedido en la dirección indicada.",
 }
-DESCRIPCION_EN_CONFECCION = "La artesana teje a mano las piezas que se confeccionan para ti."
+DESCRIPCION_EN_CONFECCION = "Tus piezas se están confeccionando a mano en el taller."
 
 
 def linea_de_estados(*, pedido: Pedido, para_cliente: bool = True) -> list[dict[str, Any]]:
     """Etapas del pedido con la fecha de cada cambio tomada del historial (requiere historial precargado).
 
-    Para la Cliente, En_preparacion se llama «En confección» solo si alguna línea tiene origen Confeccion.
+    En_preparacion se llama «En confección» si alguna línea se confecciona y «En preparación» si todo
+    sale del stock, para la Cliente y para la Emprendedora (ver `nombre_estado`).
     """
     fechas = {registro.estado_nuevo: registro.fecha_cambio for registro in pedido.historial.all()}
     actual = ESTADOS_LINEA.index(pedido.estado) if pedido.estado in ESTADOS_LINEA else -1
@@ -370,13 +378,14 @@ def linea_de_estados(*, pedido: Pedido, para_cliente: bool = True) -> list[dict[
         confeccion_visible = estado == Estado.EN_PREPARACION and con_confeccion
         etapas.append({
             "estado": estado,
-            "nombre": (
-                nombre_estado_cliente(estado, con_confeccion=con_confeccion) if para_cliente
-                else Estado(estado).label
-            ),
+            "nombre": nombre_estado(estado, con_confeccion=con_confeccion, para_cliente=para_cliente),
             "descripcion": DESCRIPCION_EN_CONFECCION if confeccion_visible else DESCRIPCIONES_ETAPA[estado],
             "fecha": fechas.get(estado),
-            "completado": indice < actual or (indice == actual and estado == Estado.ENTREGADO),
+            # En un Cancelado se marcan como alcanzadas las etapas que registró el historial.
+            "completado": (
+                estado in fechas if pedido.estado == Estado.CANCELADO
+                else indice < actual or (indice == actual and estado == Estado.ENTREGADO)
+            ),
             "actual": indice == actual,
         })
     return etapas
@@ -384,7 +393,9 @@ def linea_de_estados(*, pedido: Pedido, para_cliente: bool = True) -> list[dict[
 
 def pedidos_de_cliente(*, cliente: Usuario) -> QuerySet[Pedido]:
     """Pedidos de una Cliente, del más reciente al más antiguo, con sus líneas para nombrar el estado."""
-    return Pedido.objects.filter(cliente=cliente).prefetch_related("detalles").order_by("-id_pedido")
+    return Pedido.objects.filter(cliente=cliente).prefetch_related(
+        Prefetch("detalles", queryset=DetallePedido.objects.select_related("producto")),
+    ).order_by("-id_pedido")
 
 
 def obtener_pedido_de_cliente(*, cliente: Usuario, pedido_id: int) -> Pedido | None:
@@ -392,6 +403,62 @@ def obtener_pedido_de_cliente(*, cliente: Usuario, pedido_id: int) -> Pedido | N
     return Pedido.objects.filter(pk=pedido_id, cliente=cliente).prefetch_related(
         Prefetch("detalles", queryset=DetallePedido.objects.select_related("producto")), "historial",
     ).first()
+
+
+# --- Gestión de la Emprendedora ---
+
+ESTADOS_FILTRO = [
+    Estado.PENDIENTE, Estado.CONFIRMADO, Estado.EN_PREPARACION, Estado.LISTO, Estado.ENTREGADO, Estado.CANCELADO,
+]
+ESTADOS_CANCELABLES_EMPRENDEDORA = [Estado.PENDIENTE, Estado.CONFIRMADO]
+PATRON_NUMERO_PEDIDO = re.compile(r"^#?\s*(?:TH\s*-?\s*)?0*(\d{1,9})$", re.IGNORECASE)
+
+
+def _filtro_busqueda(busqueda: str) -> Q:
+    """Busca por número visible (#TH-0012, TH-12 o 12) o por nombre de la clienta, sin distinguir tildes."""
+    busqueda = (busqueda or "").strip()
+    if not busqueda:
+        return Q()
+    filtro = Q(cliente__nombre__unaccent__icontains=busqueda)
+    numero = PATRON_NUMERO_PEDIDO.match(busqueda)
+    if numero:
+        filtro |= Q(pk=int(numero.group(1)))
+    return filtro
+
+
+def pedidos_para_gestion(*, estado: str = "", busqueda: str = "") -> QuerySet[Pedido]:
+    """Pedidos para la tabla de la Emprendedora, con clienta y líneas precargadas (sin N+1)."""
+    pedidos = Pedido.objects.filter(_filtro_busqueda(busqueda)).select_related("cliente").prefetch_related(
+        Prefetch("detalles", queryset=DetallePedido.objects.select_related("producto").order_by("id_detalle")),
+    ).order_by("-id_pedido")
+    if estado in Estado.values:
+        pedidos = pedidos.filter(estado=estado)
+    return pedidos
+
+
+def conteos_por_estado(*, busqueda: str = "") -> dict[str, int]:
+    """Total y conteo por estado en una sola consulta (Count con filter)."""
+    conteos = Pedido.objects.filter(_filtro_busqueda(busqueda)).aggregate(
+        todos=Count("id_pedido"),
+        **{estado: Count("id_pedido", filter=Q(estado=estado)) for estado in ESTADOS_FILTRO},
+    )
+    return {clave: valor or 0 for clave, valor in conteos.items()}
+
+
+def obtener_pedido_para_gestion(*, pedido_id: int) -> Pedido | None:
+    """Pedido con clienta, líneas, historial y movimientos de insumos para el panel; None si no existe."""
+    return Pedido.objects.filter(pk=pedido_id).select_related("cliente").prefetch_related(
+        Prefetch("detalles", queryset=DetallePedido.objects.select_related("producto").order_by("id_detalle")),
+        "historial",
+        Prefetch("movimientos_insumo", queryset=MovimientoInsumo.objects.select_related("insumo").order_by(
+            "fecha_movimiento", "id_movimiento",
+        )),
+    ).first()
+
+
+def siguiente_estado(*, pedido: Pedido) -> str | None:
+    """Estado al que la Emprendedora puede avanzar el pedido; None si no avanza más."""
+    return SIGUIENTE_ESTADO.get(pedido.estado)
 
 
 def preparar_pedido_desde_bolsa(*, cliente: Usuario, bolsa: Bolsa, direccion: str, telefono: str) -> Pedido:

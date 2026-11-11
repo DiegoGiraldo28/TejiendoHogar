@@ -44,13 +44,19 @@ NOMBRES_ESTADO_CLIENTE = {
     Estado.CANCELADO: "Cancelado",
 }
 NOMBRE_EN_CONFECCION = "En confección"
+NOMBRE_EN_PREPARACION = "En preparación"
 
 
-def nombre_estado_cliente(estado: str, *, con_confeccion: bool) -> str:
-    """Nombre que ve la Cliente; En_preparacion se llama «En confección» si alguna línea se confecciona."""
-    if estado == Estado.EN_PREPARACION and con_confeccion:
-        return NOMBRE_EN_CONFECCION
-    return NOMBRES_ESTADO_CLIENTE[estado]
+def nombre_estado(estado: str, *, con_confeccion: bool, para_cliente: bool) -> str:
+    """Ayudante único del nombre visible de un estado, para la Cliente y para la Emprendedora.
+
+    En_preparacion se llama «En confección» si alguna línea se confecciona (también en un pedido mixto)
+    y «En preparación» si todo sale del stock; en la BD sigue siendo En_preparacion. Los demás estados
+    usan la tabla de la Cliente o el nombre de la BD (Emprendedora).
+    """
+    if estado == Estado.EN_PREPARACION:
+        return NOMBRE_EN_CONFECCION if con_confeccion else NOMBRE_EN_PREPARACION
+    return NOMBRES_ESTADO_CLIENTE[estado] if para_cliente else Estado(estado).label
 
 
 class Pedido(models.Model):
@@ -138,20 +144,31 @@ class Pedido(models.Model):
 
     @property
     def tiene_confeccion(self) -> bool:
-        """True si alguna línea se confecciona (usa los detalles precargados si existen)."""
-        return any(detalle.origen == Origen.CONFECCION for detalle in self.detalles.all())
+        """True si alguna línea se confecciona.
+
+        Tras confirmar decide el origen guardado (Confeccion); antes de confirmar el origen aún no existe y
+        decide el tipo del producto (Sobre pedido). Usa los detalles precargados con su producto.
+        """
+        return any(
+            detalle.origen == Origen.CONFECCION
+            or (detalle.origen is None and detalle.producto.tipo == Producto.Tipo.SOBRE_PEDIDO)
+            for detalle in self.detalles.all()
+        )
+
+    def nombre_de_estado(self, estado: str, *, para_cliente: bool) -> str:
+        """Nombre visible de cualquier estado para este pedido (solo consulta las líneas en En_preparacion)."""
+        con_confeccion = estado == Estado.EN_PREPARACION and self.tiene_confeccion
+        return nombre_estado(estado, con_confeccion=con_confeccion, para_cliente=para_cliente)
 
     @property
     def estado_cliente(self) -> str:
         """Nombre del estado que ve la Cliente en el seguimiento."""
-        if self.estado != Estado.EN_PREPARACION:
-            return NOMBRES_ESTADO_CLIENTE[self.estado]
-        return nombre_estado_cliente(self.estado, con_confeccion=self.tiene_confeccion)
+        return self.nombre_de_estado(self.estado, para_cliente=True)
 
     @property
     def estado_emprendedora(self) -> str:
-        """Nombre del estado que ve la Emprendedora."""
-        return self.get_estado_display()
+        """Nombre del estado que ve la Emprendedora (nombres de la BD, salvo En preparación / En confección)."""
+        return self.nombre_de_estado(self.estado, para_cliente=False)
 
     def __str__(self):
         return self.numero_visible

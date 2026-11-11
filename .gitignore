@@ -9,3 +9,6 @@ staticfiles/
 .coverage
 htmlcov/
 .vscode/
+# Seguimiento local del Proceso 3 (no versionar)
+PROGRESO_PEDIDOS.md
+REPORTE_PEDIDOS.md

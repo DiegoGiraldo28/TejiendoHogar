@@ -117,12 +117,9 @@
 }
 
 .card-actions form { margin: 0; }
-.text-button { padding: .5rem .25rem; border: 0; background: transparent; color: var(--terracota-oscuro); font: inherit; cursor: pointer; }
-.primary-button, .secondary-button, .danger-button { min-height: 44px; padding: .65rem 1rem; border-radius: 10px; font: inherit; font-weight: 600; cursor: pointer; }
+/* .secondary-button, .danger-button, .text-button, .button-link y .confirm-dialog viven en base.css. */
+.primary-button { min-height: 44px; padding: .65rem 1rem; border-radius: 10px; font: inherit; font-weight: 600; cursor: pointer; }
 .primary-button { border: 0; background: var(--terracota); color: white; }
-.secondary-button { border: 1px solid var(--borde); background: white; color: var(--texto); }
-.danger-button { border: 0; background: #a6372c; color: white; }
-.button-link { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .empty-state { padding: 3rem 1rem; border-radius: var(--radio-tarjeta); background: white; text-align: center; }
 .pagination { justify-content: center; margin: 1.5rem 0; }
 .form-card { max-width: 760px; }
@@ -138,11 +135,7 @@
 .image-preview { display: block; max-width: min(100%, 360px); max-height: 240px; margin-top: .75rem; border-radius: 12px; object-fit: cover; }
 .stock-fields { padding: 1rem; border: 1px solid var(--borde); border-radius: 12px; }
 .stock-fields legend { padding: 0 .35rem; font-weight: 700; }
-.form-errors { padding: .75rem; border-radius: 8px; background: #fff0ef; color: #a22e27; }
-.confirm-dialog { width: min(92vw, 440px); border: 0; border-radius: var(--radio-tarjeta); box-shadow: 0 12px 45px #1b0d0a55; }
-.confirm-dialog::backdrop { background: #30231f88; }
-.confirm-dialog form { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
-.confirm-dialog h2, .confirm-dialog p { flex-basis: 100%; }
+.form-errors { padding: .75rem; border-radius: 8px; background: var(--error-suave); color: var(--error); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 
 @media (min-width: 680px) {

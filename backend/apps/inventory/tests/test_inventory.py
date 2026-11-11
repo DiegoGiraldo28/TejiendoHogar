@@ -307,3 +307,14 @@ def test_comando_demo_es_idempotente():
     assert primera_cuenta == (6, 8)
     assert (Insumo.objects.count(), Producto.objects.count()) == primera_cuenta
     assert Producto.objects.filter(activo=False).exists()
+
+
+@pytest.mark.django_db
+def test_insumos_usan_botones_compartidos_de_la_app(client, emprendedora):
+    crear_insumo(nombre="Hilo", unidad_medida=Insumo.Unidad.CONOS, cantidad_disponible=1)
+    client.force_login(emprendedora)
+    contenido = client.get(reverse("inventory:insumos")).content.decode()
+    assert '<button class="secondary-button" type="submit">Filtrar</button>' in contenido
+    assert 'class="danger-button button-link" data-fallback-delete' in contenido
+    assert '<button type="button" class="danger-button" data-open-confirm hidden>Eliminar…</button>' in contenido
+    assert '<button type="submit" class="danger-button">Eliminar insumo</button>' in contenido
